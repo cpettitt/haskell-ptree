@@ -16,17 +16,16 @@ type Key = C.ByteString
 
 type SuffixList a = V.Vector (PTree a)
 
-data PTree a = Empty
-             | Lf Key a
-             | Br Key (Maybe a) (SuffixList a)
+data PTree a = Tip
+             | Node Key (Maybe a) (SuffixList a)
     deriving Show
 
 empty :: PTree a
-empty = Empty
+empty = Tip
 
 null :: PTree a -> Bool
-null Empty = True
-null _     = False
+null Tip = True
+null _   = False
 
 member :: Key -> PTree a -> Bool
 member k t = case lookup k t of
@@ -38,17 +37,12 @@ notMember k t = not $ member k t
 
 insert :: Key -> a -> PTree a -> PTree a
 insert k v t
-        | null t = Lf k v
+        | null t = node k (Just v)
         | k == p = setValue v t
         | otherwise = case trimPrefix p k of
             Just k' -> insertChild k' v t 
-            Nothing -> join (Lf k v) t
-    where p = getPrefix t
-
-delete :: Key -> PTree a -> PTree a
-delete k (Lf p v)
-    | k == p = Empty
-delete _ t = t
+            Nothing -> join (node k (Just v)) t
+    where p = getKey t
 
 lookup :: Key -> PTree a -> Maybe a
 lookup k t
@@ -57,13 +51,12 @@ lookup k t
         | otherwise = case trimPrefix p k of
             Just k' -> lookup k' $ getChild k' t
             Nothing -> Nothing 
-    where p = getPrefix t 
+    where p = getKey t
 
 -- Helper Code
 
-getPrefix :: PTree a -> Key
-getPrefix (Lf p _) = p
-getPrefix (Br p _ _) = p
+node :: Key -> Maybe a -> PTree a
+node k v = Node k v (V.replicate 26 Tip)
 
 trimPrefix :: Key -> Key -> Maybe Key
 trimPrefix x y
@@ -75,26 +68,25 @@ trimPrefix' :: Key -> Key -> Key
 trimPrefix' x y = C.drop (C.length x) y
 
 setKey :: Key -> PTree a -> PTree a
-setKey k (Br _ x c) = Br k x c
-setKey k (Lf _ x) = Lf k x
+setKey k (Node _ x c) = Node k x c
 
 getKey :: PTree a -> Key
-getKey (Br p _ _) = p
-getKey (Lf p _)   = p
+getKey (Node p _ _) = p
 
 setValue :: a -> PTree a -> PTree a
-setValue v (Br p _ c) = Br p (Just v) c
-setValue v (Lf p _) = Lf p v
+setValue v (Node p _ c) = Node p (Just v) c
 
 getValue :: PTree a -> Maybe a
-getValue (Br _ x _) = x
-getValue (Lf _ x)   = Just x
+getValue (Node _ x _) = x
 
-join x y = Br cp Nothing (V.replicate 26 empty V.// [(ik xp, x), (ik yp, y)])
+join :: PTree a -> PTree a -> PTree a
+join x y = insertChild x' $ insertChild y' $ node cp Nothing
     where
         (cp, xp, yp) = commonPrefix (getKey x) (getKey y)
         x' = setKey xp x
         y' = setKey yp y
+        insertChild :: PTree a -> PTree a -> PTree a
+        insertChild x (Node p v c) = Node p v (c V.// [(ik xp, x)])
         ik x = index x
 
 commonPrefix :: Key -> Key -> (Key, Key, Key)
@@ -113,13 +105,11 @@ commonPrefix x y = (c, x', y')
         y' = trimPrefix' c y
 
 insertChild :: Key -> a -> PTree a -> PTree a
-insertChild k v (Br p x c) = Br p x (c V.// [(ik, insert k v $ c V.! ik)])
+insertChild k v (Node p x c) = Node p x (c V.// [(ik, insert k v $ c V.! ik)])
     where ik = index k
-insertChild k v (Lf p x) = insertChild k v $ Br p (Just x) (V.replicate 26 empty)
 
 getChild :: Key -> PTree a -> PTree a
-getChild k (Br _ _ c) = c V.! (index k) 
-getChild _ _          = Empty
+getChild k (Node _ _ c) = c V.! (index k)
 
 index k = (ord $ C.head k) - (ord 'a')
 
@@ -141,10 +131,14 @@ prop_change_one k (v1 :: V) (v2 :: V) =
     v1 /= v2 ==>
         (lookup k $ insert k v2 $ insert k v1 empty) == Just v2
 
-prop_delete_one k (v :: V) = notMember k $ delete k $ insert k v empty
-
 main = do
     quickCheck prop_member_empty
     quickCheck prop_insert_one
     quickCheck prop_change_one
-    quickCheck prop_delete_one
+
+--main = do
+--        l <- C.getContents
+--        let t = foldl' f empty (C.lines l)
+--        putStrLn $ show t
+--    where
+--        f a x = insert x 1 a
