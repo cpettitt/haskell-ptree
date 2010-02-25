@@ -4,13 +4,12 @@
 module Data.PTree.PTree where
 
 import qualified Data.ByteString.Lazy.Char8 as C
-import Data.Char (isAsciiLower)
+import Data.Char (isAsciiLower, ord)
 import qualified Data.Vector as V
 import Prelude hiding (lookup, null)
 
 -- For Test only
-import Data.Char (ord)
-import Test.QuickCheck
+--import Test.QuickCheck
 
 type Key = C.ByteString
 
@@ -33,14 +32,14 @@ member k t = case lookup k t of
     Nothing -> False
 
 notMember :: Key -> PTree a -> Bool
-notMember k t = not $ member k t
+notMember k = not . member k
 
 insert :: Key -> a -> PTree a -> PTree a
 insert k v t
         | null t = node k (Just v)
         | k == p = setValue v t
         | otherwise = case trimPrefix p k of
-            Just k' -> insertChild k' v t 
+            Just k' -> insertChild (insert k' v $ getChild k' t) t
             Nothing -> join (node k (Just v)) t
     where p = getKey t
 
@@ -50,7 +49,7 @@ lookup k t
         | p == k = getValue t
         | otherwise = case trimPrefix p k of
             Just k' -> lookup k' $ getChild k' t
-            Nothing -> Nothing 
+            Nothing -> Nothing
     where p = getKey t
 
 -- Helper Code
@@ -65,7 +64,7 @@ trimPrefix x y
 
 -- Assumes prefix has already been checked
 trimPrefix' :: Key -> Key -> Key
-trimPrefix' x y = C.drop (C.length x) y
+trimPrefix' = C.drop . C.length
 
 setKey :: Key -> PTree a -> PTree a
 setKey k (Node _ x c) = Node k x c
@@ -85,9 +84,9 @@ join x y = insertChild x' $ insertChild y' $ node cp Nothing
         (cp, xp, yp) = commonPrefix (getKey x) (getKey y)
         x' = setKey xp x
         y' = setKey yp y
-        insertChild :: PTree a -> PTree a -> PTree a
-        insertChild x (Node p v c) = Node p v (c V.// [(ik xp, x)])
-        ik x = index x
+
+insertChild :: PTree a -> PTree a -> PTree a
+insertChild x (Node p v c) = Node p v (c V.// [(index $ getKey x, x)])
 
 commonPrefix :: Key -> Key -> (Key, Key, Key)
 commonPrefix x y = (c, x', y')
@@ -104,17 +103,13 @@ commonPrefix x y = (c, x', y')
         x' = trimPrefix' c x
         y' = trimPrefix' c y
 
-insertChild :: Key -> a -> PTree a -> PTree a
-insertChild k v (Node p x c) = Node p x (c V.// [(ik, insert k v $ c V.! ik)])
-    where ik = index k
-
 getChild :: Key -> PTree a -> PTree a
-getChild k (Node _ _ c) = c V.! (index k)
+getChild k (Node _ _ c) = c V.! index k
 
-index k = (ord $ C.head k) - (ord 'a')
+index k = ord (C.head k) - ord 'a'
 
 -- Quick Check Code
-
+{-
 instance Arbitrary Key where
     arbitrary = C.pack `fmap` (listOf $ choose ('a', 'z'))
 
@@ -135,10 +130,4 @@ main = do
     quickCheck prop_member_empty
     quickCheck prop_insert_one
     quickCheck prop_change_one
-
---main = do
---        l <- C.getContents
---        let t = foldl' f empty (C.lines l)
---        putStrLn $ show t
---    where
---        f a x = insert x 1 a
+-}
