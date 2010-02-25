@@ -1,15 +1,9 @@
--- For Test only
-{-# LANGUAGE TypeSynonymInstances, ScopedTypeVariables #-}
-
 module Data.PTree.PTree where
 
 import qualified Data.ByteString.Lazy.Char8 as C
-import Data.Char (isAsciiLower, ord)
+import Data.Char (ord)
 import qualified Data.Vector as V
 import Prelude hiding (lookup, null)
-
--- For Test only
---import Test.QuickCheck
 
 type Key = C.ByteString
 
@@ -68,15 +62,19 @@ trimPrefix' = C.drop . C.length
 
 setKey :: Key -> PTree a -> PTree a
 setKey k (Node _ x c) = Node k x c
+setKey _ Tip = error "PTree.setKey: Cannot set key for Tip"
 
 getKey :: PTree a -> Key
 getKey (Node p _ _) = p
+getKey Tip = error "PTree.getKey: Cannot get key for Tip"
 
 setValue :: a -> PTree a -> PTree a
 setValue v (Node p _ c) = Node p (Just v) c
+setValue _ Tip = error "PTree.setValue: Cannot set value for Tip"
 
 getValue :: PTree a -> Maybe a
 getValue (Node _ x _) = x
+getValue Tip = error "PTree.getValue: Cannot get value for Tip"
 
 join :: PTree a -> PTree a -> PTree a
 join x y = insertChild x' $ insertChild y' $ node cp Nothing
@@ -87,6 +85,7 @@ join x y = insertChild x' $ insertChild y' $ node cp Nothing
 
 insertChild :: PTree a -> PTree a -> PTree a
 insertChild x (Node p v c) = Node p v (c V.// [(index $ getKey x, x)])
+insertChild _ Tip = error "PTree.insertChild: Cannot insert child for Tip"
 
 commonPrefix :: Key -> Key -> (Key, Key, Key)
 commonPrefix x y = (c, x', y')
@@ -105,29 +104,7 @@ commonPrefix x y = (c, x', y')
 
 getChild :: Key -> PTree a -> PTree a
 getChild k (Node _ _ c) = c V.! index k
+getChild _ Tip = error "PTree.getChild: Cannot get child for Tip"
 
+index :: Key -> Int
 index k = ord (C.head k) - ord 'a'
-
--- Quick Check Code
-{-
-instance Arbitrary Key where
-    arbitrary = C.pack `fmap` (listOf $ choose ('a', 'z'))
-
-instance CoArbitrary Key where
-    coarbitrary = coarbitrary . C.unpack
-
-type V = Int
-
-prop_member_empty k = notMember k empty
-
-prop_insert_one k (v :: V) = (lookup k $ insert k v empty) == Just v
-
-prop_change_one k (v1 :: V) (v2 :: V) =
-    v1 /= v2 ==>
-        (lookup k $ insert k v2 $ insert k v1 empty) == Just v2
-
-main = do
-    quickCheck prop_member_empty
-    quickCheck prop_insert_one
-    quickCheck prop_change_one
--}
