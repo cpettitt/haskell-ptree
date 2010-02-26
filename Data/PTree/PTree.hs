@@ -7,10 +7,8 @@ import Prelude hiding (lookup, null)
 
 type Key = C.ByteString
 
-type SuffixList a = V.Vector (PTree a)
-
 data PTree a = Tip
-             | Node Key (Maybe a) (SuffixList a)
+             | Node Key (Maybe a) (V.Vector (PTree a))
     deriving Show
 
 empty :: PTree a
@@ -29,22 +27,20 @@ notMember :: Key -> PTree a -> Bool
 notMember k = not . member k
 
 insert :: Key -> a -> PTree a -> PTree a
-insert k v t
-        | null t = node k (Just v)
-        | k == p = setValue v t
-        | otherwise = case trimPrefix p k of
-            Just k' -> insertChild (insert k' v $ getChild k' t) t
-            Nothing -> join (node k (Just v)) t
-    where p = getKey t
+insert k v Tip = node k (Just v)
+insert k v n@(Node nk _ nc)
+        | k == nk = Node nk (Just v) nc
+        | otherwise = case trimPrefix nk k of
+            Just k' -> insertChild (insert k' v $ getChild k' n) n
+            Nothing -> join (node k (Just v)) n
 
 lookup :: Key -> PTree a -> Maybe a
-lookup k t
-        | null t = Nothing
-        | p == k = getValue t
-        | otherwise = case trimPrefix p k of
-            Just k' -> lookup k' $ getChild k' t
+lookup _ Tip = Nothing
+lookup k n@(Node nk nv _)
+        | k == nk = nv
+        | otherwise = case trimPrefix nk k of
+            Just k' -> lookup k' $ getChild k' n
             Nothing -> Nothing
-    where p = getKey t
 
 -- Helper Code
 
@@ -60,32 +56,17 @@ trimPrefix x y
 trimPrefix' :: Key -> Key -> Key
 trimPrefix' = C.drop . C.length
 
-setKey :: Key -> PTree a -> PTree a
-setKey k (Node _ x c) = Node k x c
-setKey _ Tip = error "PTree.setKey: Cannot set key for Tip"
-
-getKey :: PTree a -> Key
-getKey (Node p _ _) = p
-getKey Tip = error "PTree.getKey: Cannot get key for Tip"
-
-setValue :: a -> PTree a -> PTree a
-setValue v (Node p _ c) = Node p (Just v) c
-setValue _ Tip = error "PTree.setValue: Cannot set value for Tip"
-
-getValue :: PTree a -> Maybe a
-getValue (Node _ x _) = x
-getValue Tip = error "PTree.getValue: Cannot get value for Tip"
-
 join :: PTree a -> PTree a -> PTree a
-join x y = insertChild x' $ insertChild y' $ node cp Nothing
+join (Node xk xv xc) (Node yk yv yc) = insertChild x' $ insertChild y' $ node ck Nothing
     where
-        (cp, xp, yp) = commonPrefix (getKey x) (getKey y)
-        x' = setKey xp x
-        y' = setKey yp y
+        (ck, xk', yk') = commonPrefix xk yk
+        x' = Node xk' xv xc
+        y' = Node yk' yv yc
+join _ _ = error "join: can't join Tip"
 
 insertChild :: PTree a -> PTree a -> PTree a
-insertChild x (Node p v c) = Node p v (c V.// [(index $ getKey x, x)])
-insertChild _ Tip = error "PTree.insertChild: Cannot insert child for Tip"
+insertChild x@(Node xk _ _) (Node yk yv yc) = Node yk yv (yc V.// [(index xk, x)])
+insertChild _ _ = error "insertChild: Cannot insert child for Tip"
 
 commonPrefix :: Key -> Key -> (Key, Key, Key)
 commonPrefix x y = (c, x', y')
@@ -103,8 +84,8 @@ commonPrefix x y = (c, x', y')
         y' = trimPrefix' c y
 
 getChild :: Key -> PTree a -> PTree a
-getChild k (Node _ _ c) = c V.! index k
-getChild _ Tip = error "PTree.getChild: Cannot get child for Tip"
+getChild k (Node _ _ xc) = xc V.! index k
+getChild _ Tip = error "getChild: Cannot get child for Tip"
 
 index :: Key -> Int
 index k = ord (C.head k) - ord 'a'
