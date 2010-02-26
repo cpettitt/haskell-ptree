@@ -3,6 +3,7 @@ module Data.PTree.PTree where
 import Control.Arrow (first)
 import qualified Data.ByteString.Char8 as C
 import Data.Char (ord)
+import Data.Function (on)
 import qualified Data.Vector as V
 import Prelude hiding (foldr, lookup, null)
 import qualified Prelude as Prelude
@@ -14,6 +15,9 @@ data PTree a = Tip
 
 instance (Show a) => Show (PTree a) where
     show = show . map (first C.unpack) . toList
+
+instance (Eq a) => Eq (PTree a) where
+    (==) = (==) `on` toList
 
 empty :: PTree a
 empty = Tip
