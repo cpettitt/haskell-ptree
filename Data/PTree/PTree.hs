@@ -1,15 +1,19 @@
 module Data.PTree.PTree where
 
+import Control.Arrow (first)
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Char (ord)
 import qualified Data.Vector as V
-import Prelude hiding (lookup, null)
+import Prelude hiding (foldr, lookup, null)
+import qualified Prelude as Prelude
 
 type Key = C.ByteString
 
 data PTree a = Tip
              | Node Key (Maybe a) (V.Vector (PTree a))
-    deriving Show
+
+instance (Show a) => Show (PTree a) where
+    show = show . map (first C.unpack) . toList
 
 empty :: PTree a
 empty = Tip
@@ -25,6 +29,16 @@ member k t = case lookup k t of
 
 notMember :: Key -> PTree a -> Bool
 notMember k = not . member k
+
+keys :: PTree a -> [Key]
+keys = foldr step []
+    where step k _ = (k:)
+
+toList :: PTree a -> [(Key, a)]
+toList = foldr (\k v -> ((k,v):)) []
+
+foldr :: (Key -> a -> b -> b) -> b -> PTree a -> b
+foldr = foldrNode C.empty
 
 insert :: Key -> a -> PTree a -> PTree a
 insert k v Tip = node k (Just v)
@@ -89,3 +103,13 @@ getChild _ Tip = error "getChild: Cannot get child for Tip"
 
 index :: Key -> Int
 index k = ord (C.head k) - ord 'a'
+
+foldrNode :: Key -> (Key -> a -> b -> b) -> b -> PTree a -> b
+foldrNode _ _ z Tip = z
+foldrNode p f z (Node k v c) = Prelude.foldr step z' $ V.toList c
+    where
+        p' = p `C.append` k
+        z' = case v of
+            Just v' -> f p' v' z
+            Nothing -> z
+        step x a = foldrNode p' f a x

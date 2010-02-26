@@ -1,5 +1,4 @@
 - Key type class for new key type instances
 - Arbitrary "suffix" characters
-- Nice Show representation for ptrees
 - QuickCheck for operations on random trees
 - Documentation!
