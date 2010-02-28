@@ -1,20 +1,20 @@
 module Data.PTree.PTree where
 
 import Control.Arrow (first)
-import qualified Data.ByteString.Char8 as C
-import Data.Char (ord)
+import qualified Data.ByteString as S
 import Data.Function (on)
-import qualified Data.Vector as V
+import qualified Data.IntMap as IM
+import Data.Word
 import Prelude hiding (foldr, lookup, null)
-import qualified Prelude as Prelude
+import qualified Prelude
 
-type Key = C.ByteString
+type Key = S.ByteString
 
 data PTree a = Tip
-             | Node Key (Maybe a) (V.Vector (PTree a))
+             | Node Key (Maybe a) (IM.IntMap (PTree a))
 
 instance (Show a) => Show (PTree a) where
-    show = show . map (first C.unpack) . toList
+    show = show . map (first S.unpack) . toList
 
 instance (Eq a) => Eq (PTree a) where
     (==) = (==) `on` toList
@@ -42,7 +42,7 @@ toList :: PTree a -> [(Key, a)]
 toList = foldr (\k v -> ((k,v):)) []
 
 foldr :: (Key -> a -> b -> b) -> b -> PTree a -> b
-foldr = foldrNode C.empty
+foldr = foldrNode S.empty
 
 insert :: Key -> a -> PTree a -> PTree a
 insert k v Tip = node k (Just v)
@@ -63,16 +63,16 @@ lookup k n@(Node nk nv _)
 -- Helper Code
 
 node :: Key -> Maybe a -> PTree a
-node k v = Node k v (V.replicate 26 Tip)
+node k v = Node k v IM.empty
 
 trimPrefix :: Key -> Key -> Maybe Key
 trimPrefix x y
-    | x `C.isPrefixOf` y = Just $ trimPrefix' x y
+    | x `S.isPrefixOf` y = Just $ trimPrefix' x y
     | otherwise = Nothing
 
 -- Assumes prefix has already been checked
 trimPrefix' :: Key -> Key -> Key
-trimPrefix' = C.drop . C.length
+trimPrefix' = S.drop . S.length
 
 join :: PTree a -> PTree a -> PTree a
 join (Node xk xv xc) (Node yk yv yc) = insertChild x' $ insertChild y' $ node ck Nothing
@@ -83,37 +83,37 @@ join (Node xk xv xc) (Node yk yv yc) = insertChild x' $ insertChild y' $ node ck
 join _ _ = error "join: can't join Tip"
 
 insertChild :: PTree a -> PTree a -> PTree a
-insertChild x@(Node xk _ _) (Node yk yv yc) = Node yk yv (yc V.// [(index xk, x)])
+insertChild x@(Node xk _ _) (Node yk yv yc) = Node yk yv (IM.insert (toChildKey xk) x yc)
 insertChild _ _ = error "insertChild: Cannot insert child for Tip"
 
 commonPrefix :: Key -> Key -> (Key, Key, Key)
 commonPrefix x y = (c, x', y')
     where
-        c = C.unfoldr f (x, y)
-        f :: (Key, Key) -> Maybe (Char, (Key, Key))
+        c = S.unfoldr f (x, y)
+        f :: (Key, Key) -> Maybe (Word8, (Key, Key))
         f (xa, ya)
-            | C.length xa == 0 || C.length ya == 0 = Nothing
-            | xc == yc = Just (xc, (C.tail xa, C.tail ya))
+            | S.length xa == 0 || S.length ya == 0 = Nothing
+            | xc == yc = Just (xc, (S.tail xa, S.tail ya))
             | otherwise = Nothing
             where
-                xc = C.head xa
-                yc = C.head ya
+                xc = S.head xa
+                yc = S.head ya
         x' = trimPrefix' c x
         y' = trimPrefix' c y
 
 getChild :: Key -> PTree a -> PTree a
-getChild k (Node _ _ xc) = xc V.! index k
-getChild _ Tip = error "getChild: Cannot get child for Tip"
-
-index :: Key -> Int
-index k = ord (C.head k) - ord 'a'
+getChild k (Node _ _ xc) = IM.findWithDefault Tip (toChildKey k) xc
+getChild _ _ = error "getChild: Cannot get child for Tip"
 
 foldrNode :: Key -> (Key -> a -> b -> b) -> b -> PTree a -> b
 foldrNode _ _ z Tip = z
-foldrNode p f z (Node k v c) = Prelude.foldr step z' $ V.toList c
+foldrNode p f z (Node k v c) = Prelude.foldr step z' $ map snd $ IM.toList c
     where
-        p' = p `C.append` k
+        p' = p `S.append` k
         z' = case v of
             Just v' -> f p' v' z
             Nothing -> z
         step x a = foldrNode p' f a x
+
+toChildKey :: Key -> IM.Key
+toChildKey = fromIntegral . S.head
