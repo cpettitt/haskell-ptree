@@ -2,6 +2,7 @@ module Data.PTree where
 
 import Control.Arrow (first)
 import qualified Data.ByteString as S
+import qualified Data.ByteString.Unsafe as SU
 import Data.Function (on)
 import qualified Data.IntMap as IM
 import Data.Word
@@ -72,7 +73,7 @@ trimPrefix x y
 
 -- Assumes prefix has already been checked
 trimPrefix' :: Key -> Key -> Key
-trimPrefix' = S.drop . S.length
+trimPrefix' = SU.unsafeDrop . S.length
 
 join :: PTree a -> PTree a -> PTree a
 join (Node xk xv xc) (Node yk yv yc) = insertChild x' $ insertChild y' $ node ck Nothing
