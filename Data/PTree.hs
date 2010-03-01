@@ -11,8 +11,10 @@ import qualified Prelude
 
 type Key = S.ByteString
 
+type Children a = IM.IntMap (PTree a)
+
 data PTree a = Tip
-             | Node Key (Maybe a) (IM.IntMap (PTree a))
+             | Node {-# UNPACK #-} !Key (Maybe a) !(Children a)
 
 instance (Show a) => Show (PTree a) where
     show = show . map (first S.unpack) . toList
@@ -50,15 +52,15 @@ insert k v Tip = node k (Just v)
 insert k v n@(Node nk _ nc)
         | k == nk = Node nk (Just v) nc
         | otherwise = case trimPrefix nk k of
-            Just k' -> insertChild (insert k' v $ getChild k' n) n
+            Just k' -> insertChild (insert k' v $ getChild k' nc) n
             Nothing -> join (node k (Just v)) n
 
 lookup :: Key -> PTree a -> Maybe a
 lookup _ Tip = Nothing
-lookup k n@(Node nk nv _)
+lookup k n@(Node nk nv nc)
         | k == nk = nv
         | otherwise = case trimPrefix nk k of
-            Just k' -> lookup k' $ getChild k' n
+            Just k' -> lookup k' $ getChild k' nc
             Nothing -> Nothing
 
 -- Helper Code
@@ -94,17 +96,17 @@ commonPrefix x y = (c, x', y')
         f :: (Key, Key) -> Maybe (Word8, (Key, Key))
         f (xa, ya)
             | S.length xa == 0 || S.length ya == 0 = Nothing
-            | xc == yc = Just (xc, (S.tail xa, S.tail ya))
+            | xc == yc = Just (xc, (SU.unsafeTail xa, SU.unsafeTail ya))
             | otherwise = Nothing
             where
-                xc = S.head xa
-                yc = S.head ya
+                xc = SU.unsafeHead xa
+                yc = SU.unsafeHead ya
         x' = trimPrefix' c x
         y' = trimPrefix' c y
 
-getChild :: Key -> PTree a -> PTree a
-getChild k (Node _ _ xc) = IM.findWithDefault Tip (toChildKey k) xc
-getChild _ _ = error "getChild: Cannot get child for Tip"
+{-# INLINE getChild #-}
+getChild :: Key -> Children a -> PTree a
+getChild k c = IM.findWithDefault Tip (toChildKey k) c
 
 foldrNode :: Key -> (Key -> a -> b -> b) -> b -> PTree a -> b
 foldrNode _ _ z Tip = z
