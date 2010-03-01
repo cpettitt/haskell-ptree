@@ -16,5 +16,5 @@ Extra-Source-Files: test/Main.hs
 
 Library
     Build-Depends:      base, bytestring, containers
-    Exposed-Modules:    Data.PTree.PTree
+    Exposed-Modules:    Data.PTree
     Ghc-Options:        -Wall

@@ -1,4 +1,4 @@
-module Data.PTree.PTree where
+module Data.PTree where
 
 import Control.Arrow (first)
 import qualified Data.ByteString as S
