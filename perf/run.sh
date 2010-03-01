@@ -9,3 +9,6 @@ do
     echo
     echo
 done 
+
+# Clean up
+rm Main Main.hi Main.o
