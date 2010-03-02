@@ -86,7 +86,9 @@ join (Node xk xv xc) (Node yk yv yc) = insertChild x' $ insertChild y' $ node ck
 join _ _ = error "join: can't join Tip"
 
 insertChild :: PTree a -> PTree a -> PTree a
-insertChild x@(Node xk _ _) (Node yk yv yc) = Node yk yv (IM.insert (toChildKey xk) x yc)
+insertChild x@(Node xk xv _) (Node yk yv yc)
+    | S.null xk = Node yk xv yc
+    | otherwise = Node yk yv (IM.insert (toChildKey xk) x yc)
 insertChild _ _ = error "insertChild: Cannot insert child for Tip"
 
 commonPrefix :: Key -> Key -> (Key, Key, Key)
