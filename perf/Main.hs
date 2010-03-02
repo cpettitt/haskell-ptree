@@ -1,38 +1,40 @@
 module Main (main) where
 
+import Criterion.Main
 import qualified Data.ByteString.Char8 as C
 import Data.List (foldl')
 import Data.Map as M
 import Data.Maybe (fromJust)
 import qualified Data.PTree as P
 import qualified Data.Trie as T
-import System (getArgs)
 
-datamap :: [C.ByteString] -> IO ()
-datamap d = do
-            let t = foldl' (\a x -> M.insert x 1 a) (M.empty :: M.Map C.ByteString Int) d
-            putStrLn $ show $ foldl' (\a x -> (fromJust $ M.lookup x t) + a) 0 $ take (100 * (length d)) $ cycle d
+datamap :: Int -> IO ()
+datamap n = do
+    d <- C.readFile "testdata"
+    let k = C.lines d
+    let t = foldl' (\a x -> M.insert x 1 a) (M.empty :: M.Map C.ByteString Int) k
+    putStr $ show $ foldl' (\a x -> (fromJust $ M.lookup x t) + a) 0 $ take (n * (length k)) $ cycle k
 
-ptree :: [C.ByteString] -> IO ()
-ptree d = do
-            let t = foldl' (\a x -> P.insert x 1 a) (P.empty :: P.PTree Int) d
-            putStrLn $ show $ foldl' (\a x -> (fromJust $ P.lookup x t) + a) 0 $ take (100 * (length d)) $ cycle d
+dataptree :: Int ->  IO ()
+dataptree n = do
+    d <- C.readFile "testdata"
+    let k = C.lines d
+    let t = foldl' (\a x -> P.insert x 1 a) (P.empty :: P.PTree Int) k
+    putStr $ show $ foldl' (\a x -> (fromJust $ P.lookup x t) + a) 0 $ take (n * (length k)) $ cycle k
 
-trie :: [C.ByteString] -> IO ()
-trie d = do
-            let t = foldl' (\a x -> T.insert x 1 a) (T.empty :: T.Trie Int) d
-            putStrLn $ show $ foldl' (\a x -> (fromJust $ T.lookup x t) + a) 0 $ take (100 * (length d)) $ cycle d
-
-cmd :: String -> [C.ByteString] -> IO ()
-cmd "datamap" d = datamap d
-cmd "ptree"   d = ptree d
-cmd "trie"    d = trie d
-cmd c         _ = error $ "Unrecognized command: " ++ c
+datatrie :: Int -> IO ()
+datatrie n = do
+    d <- C.readFile "testdata"
+    let k = C.lines d
+    let t = foldl' (\a x -> T.insert x 1 a) (T.empty :: T.Trie Int) k
+    putStr $ show $ foldl' (\a x -> (fromJust $ T.lookup x t) + a) 0 $ take (n * (length k)) $ cycle k
 
 main :: IO ()
-main = do
-    args <- getArgs
-    d <- C.getContents >>= return . C.lines
-    case length args of
-        0 -> error "Please specify the test type (one of datamap, ptree, trie)"
-        _ -> cmd (head args) d
+main = defaultMain [
+        bench "Data.PTree 1"  $ dataptree 1
+      , bench "Data.Map 1"    $ datamap 1
+      , bench "Data.Trie 1"   $ datatrie 1
+      , bench "Data.PTree 10" $ dataptree 10
+      , bench "Data.Map 10"   $ datamap 10
+      , bench "Data.Trie 10"  $ datatrie 10
+      ]
