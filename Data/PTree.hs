@@ -33,7 +33,6 @@ module Data.PTree (
         , toList
     ) where
 
-import Control.Arrow (first)
 import qualified Data.ByteString as S
 import qualified Data.ByteString.Unsafe as SU
 import Data.Function (on)
