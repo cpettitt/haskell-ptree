@@ -52,7 +52,7 @@ data PTree a = Tip
              | Node {-# UNPACK #-} !Key (Maybe a) !(Children a)
 
 instance (Show a) => Show (PTree a) where
-    show = show . map (first S.unpack) . toList
+    show = show . toList
 
 instance (Eq a) => Eq (PTree a) where
     (==) = (==) `on` toList
