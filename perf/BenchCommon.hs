@@ -25,12 +25,7 @@ insertStrings :: (Map a) => [C.ByteString] -> a -> a
 insertStrings xs m = foldl' (\a x -> insert x 1 a) m xs
 
 loadData :: String -> IO ([C.ByteString])
-loadData f = do
-    keys <- C.readFile ("data/" ++ f ++ ".data") >>= return . C.lines
-    -- Force strict evaluation.
-    if keys == keys
-        then return keys
-        else error ""
+loadData f = C.readFile ("data/" ++ f ++ ".data") >>= return . C.lines
 
 testConfigs :: [String]
 testConfigs = [ (t ++ "-" ++ (show n) ++ "k") | t <- ["seq", "rnd"], n <- [1, 10] ]
@@ -38,8 +33,9 @@ testConfigs = [ (t ++ "-" ++ (show n) ++ "k") | t <- ["seq", "rnd"], n <- [1, 10
 commonMain :: (Map a) => a -> IO ()
 commonMain e = do
     keys <- mapM loadData testConfigs
-    let configAndKeys = zip testConfigs keys
+    let fullMaps = map (\x -> let !sx = insertStrings (map C.copy x) e in sx) keys
+    let configAndKeys = zip3 testConfigs keys fullMaps
     defaultMain
-                [ bgroup "insert" $ map (\(c, xs) -> bench c $ benchInsert xs e) configAndKeys
-                , bgroup "lookup" $ map (\(c, xs) -> bench c $ benchLookup xs (insertStrings xs e)) configAndKeys
+                [ bgroup "insert" $ map (\(c, xs, _) -> bench c $ benchInsert xs e) configAndKeys
+                , bgroup "lookup" $ map (\(c, xs, fm) -> bench c $ benchLookup xs fm) configAndKeys
                 ]
