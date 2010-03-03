@@ -13,6 +13,7 @@ instance Map DataTrie where
     empty = T.empty
     insert = T.insert
     lookup k = fromJust . T.lookup k
+    keys = T.keys
 
 main :: IO ()
 main = commonMain (empty :: DataTrie)

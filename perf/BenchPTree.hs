@@ -13,6 +13,7 @@ instance Map DataPTree where
     empty = P.empty
     insert = P.insert
     lookup k = fromJust . P.lookup k
+    keys = P.keys
 
 main :: IO ()
 main = commonMain (empty :: DataPTree)

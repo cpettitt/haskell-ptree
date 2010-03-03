@@ -9,6 +9,7 @@ class Map a where
     empty :: a
     insert :: C.ByteString -> Int -> a -> a
     lookup :: C.ByteString -> a -> Int
+    keys :: a -> [C.ByteString]
 
 -- | Inserts every string from [C.ByteString] to the supplied Map.
 benchInsert :: (Map a) => [C.ByteString] -> a -> IO ()
@@ -19,8 +20,12 @@ benchInsert xs m = return (insertStrings xs m) >>= putStrLn . show . lookup (hea
 benchLookup :: (Map a) => [C.ByteString] -> a -> IO ()
 benchLookup xs m = putStrLn $ show $ foldl' (\a x -> lookup x m + a) 0 xs
 
--- | Inserts every string from [C.ByteString] to the supplied Map and returns
---   the Map through the IO Monad.
+-- | Benchmarks the time it takes to retrieve all keys from the supplied
+--   Map.
+benchKeys :: (Map a) => a -> IO ()
+benchKeys m = putStrLn $ show $ length $ keys m
+
+-- | Inserts every string from [C.ByteString] into the supplied Map.
 insertStrings :: (Map a) => [C.ByteString] -> a -> a
 insertStrings xs m = foldl' (\a x -> insert x 1 a) m xs
 
@@ -34,8 +39,9 @@ commonMain :: (Map a) => a -> IO ()
 commonMain e = do
     keys <- mapM loadData testConfigs
     let fullMaps = map (\x -> let !sx = insertStrings (map C.copy x) e in sx) keys
-    let configAndKeys = zip3 testConfigs keys fullMaps
+    let ckf = zip3 testConfigs keys fullMaps
     defaultMain
-                [ bgroup "insert" $ map (\(c, xs, _) -> bench c $ benchInsert xs e) configAndKeys
-                , bgroup "lookup" $ map (\(c, xs, fm) -> bench c $ benchLookup xs fm) configAndKeys
+                [ bgroup "insert" $ map (\(c, xs, _) -> bench c $ benchInsert xs e) ckf
+                , bgroup "lookup" $ map (\(c, xs, fm) -> bench c $ benchLookup xs fm) ckf
+                , bgroup "keys"   $ map (\(c, _, fm) -> bench c $ benchKeys fm) ckf
                 ]

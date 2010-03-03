@@ -14,6 +14,7 @@ instance Map DataMap where
     empty = M.empty
     insert = M.insert
     lookup k = fromJust . M.lookup k
+    keys = M.keys
 
 main :: IO ()
 main = commonMain (empty :: DataMap)
