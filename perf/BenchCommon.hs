@@ -33,7 +33,7 @@ loadData f = do
         else error ""
 
 testConfigs :: [String]
-testConfigs = [ (t ++ "-" ++ (show n) ++ "k") | t <- ["seq", "rnd"], n <- [1, 10, 50] ]
+testConfigs = [ (t ++ "-" ++ (show n) ++ "k") | t <- ["seq", "rnd"], n <- [1, 10] ]
 
 commonMain :: (Map a) => a -> IO ()
 commonMain e = do
