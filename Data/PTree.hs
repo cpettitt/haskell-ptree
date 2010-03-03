@@ -88,6 +88,16 @@ toList = foldr (\k v -> ((k,v):)) []
 -- | /O(n)/ Right-folds the values in the PTree.
 foldr :: (Key -> a -> b -> b) -> b -> PTree a -> b
 foldr = foldrNode S.empty
+    where
+        foldrNode :: Key -> (Key -> a -> b -> b) -> b -> PTree a -> b
+        foldrNode _ _ z Tip = z
+        foldrNode p f z (Node k v c) = Prelude.foldr step z' $ map snd $ IM.toList c
+            where
+                p' = p `S.append` k
+                z' = case v of
+                    Just v' -> f p' v' z
+                    Nothing -> z
+                step x a = foldrNode p' f a x
 
 -- | Inserts the given key/value pair into the PTree.
 insert :: Key -> a -> PTree a -> PTree a
@@ -141,7 +151,7 @@ commonPrefix x y = (c, x', y')
         c = S.unfoldr f (x, y)
         f :: (Key, Key) -> Maybe (Word8, (Key, Key))
         f (xa, ya)
-            | S.length xa == 0 || S.length ya == 0 = Nothing
+            | S.null xa || S.null ya = Nothing
             | xc == yc = Just (xc, (SU.unsafeTail xa, SU.unsafeTail ya))
             | otherwise = Nothing
             where
@@ -153,16 +163,6 @@ commonPrefix x y = (c, x', y')
 {-# INLINE getChild #-}
 getChild :: Key -> Children a -> PTree a
 getChild = IM.findWithDefault Tip . toChildKey
-
-foldrNode :: Key -> (Key -> a -> b -> b) -> b -> PTree a -> b
-foldrNode _ _ z Tip = z
-foldrNode p f z (Node k v c) = Prelude.foldr step z' $ map snd $ IM.toList c
-    where
-        p' = p `S.append` k
-        z' = case v of
-            Just v' -> f p' v' z
-            Nothing -> z
-        step x a = foldrNode p' f a x
 
 toChildKey :: Key -> IM.Key
 toChildKey = fromIntegral . SU.unsafeHead
