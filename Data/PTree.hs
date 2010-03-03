@@ -57,7 +57,7 @@ insert k v n@(Node nk _ nc)
 
 lookup :: Key -> PTree a -> Maybe a
 lookup _ Tip = Nothing
-lookup k n@(Node nk nv nc)
+lookup k (Node nk nv nc)
         | k == nk = nv
         | otherwise = case trimPrefix nk k of
             Just k' -> lookup k' $ getChild k' nc
@@ -108,7 +108,7 @@ commonPrefix x y = (c, x', y')
 
 {-# INLINE getChild #-}
 getChild :: Key -> Children a -> PTree a
-getChild k c = IM.findWithDefault Tip (toChildKey k) c
+getChild = IM.findWithDefault Tip . toChildKey
 
 foldrNode :: Key -> (Key -> a -> b -> b) -> b -> PTree a -> b
 foldrNode _ _ z Tip = z
@@ -121,4 +121,4 @@ foldrNode p f z (Node k v c) = Prelude.foldr step z' $ map snd $ IM.toList c
         step x a = foldrNode p' f a x
 
 toChildKey :: Key -> IM.Key
-toChildKey = fromIntegral . S.head
+toChildKey = fromIntegral . SU.unsafeHead
