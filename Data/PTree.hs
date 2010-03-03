@@ -30,13 +30,17 @@ module Data.PTree (
 
         -- * Conversions
         , keys
+
+        -- * Lists
         , toList
+        , fromList
     ) where
 
 import qualified Data.ByteString as S
 import qualified Data.ByteString.Unsafe as SU
 import Data.Function (on)
 import qualified Data.IntMap as IM
+import Data.List (foldl')
 import Data.Word
 import Prelude hiding (foldr, lookup, null)
 import qualified Prelude
@@ -51,7 +55,7 @@ data PTree a = Tip
              | Node {-# UNPACK #-} !Key (Maybe a) !(Children a)
 
 instance (Show a) => Show (PTree a) where
-    show = show . toList
+    show = showString "fromList " . show . toList
 
 instance (Eq a) => Eq (PTree a) where
     (==) = (==) `on` toList
@@ -83,6 +87,12 @@ keys = foldr step []
 -- | /O(n)/ Converts the PTree to a list of key/value pairs.
 toList :: PTree a -> [(Key, a)]
 toList = foldr (\k v -> ((k,v):)) []
+
+-- | Create a PTree from a list of key/value pairs.
+fromList :: [(Key, a)] -> PTree a
+fromList = foldl' ins empty
+    where
+        ins m (k, v) = insert k v m
 
 -- | /O(n)/ Right-folds the values in the PTree.
 foldr :: (Key -> a -> b -> b) -> b -> PTree a -> b
