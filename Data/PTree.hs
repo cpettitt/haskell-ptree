@@ -1,4 +1,37 @@
-module Data.PTree where
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.PTree
+-- Copyright   :  Copyright (c) 2010 Chris Pettitt
+-- License     :  MIT
+-- Maintainer  :  cpettitt@gmail.com
+--
+-- An efficient implementation of maps from @ByteString@s to values.
+--
+-----------------------------------------------------------------------------
+
+module Data.PTree (
+        -- * Types
+          PTree, Key
+
+        -- * Construction
+        , empty
+
+        -- * Queries
+        , null
+        , member
+        , notMember
+        , lookup
+
+        -- * Insertion
+        , insert
+
+        -- * Folds
+        , foldr
+
+        -- * Conversions
+        , keys
+        , toList
+    ) where
 
 import Control.Arrow (first)
 import qualified Data.ByteString as S
@@ -9,10 +42,12 @@ import Data.Word
 import Prelude hiding (foldr, lookup, null)
 import qualified Prelude
 
+-- | The key type for PTrees.
 type Key = S.ByteString
 
 type Children a = IM.IntMap (PTree a)
 
+-- | A map of ByteStrings to values.
 data PTree a = Tip
              | Node {-# UNPACK #-} !Key (Maybe a) !(Children a)
 
@@ -22,31 +57,39 @@ instance (Show a) => Show (PTree a) where
 instance (Eq a) => Eq (PTree a) where
     (==) = (==) `on` toList
 
+-- | /O(1)/ Constructs an empty PTree.
 empty :: PTree a
 empty = Tip
 
+-- | /O(1)/ Tests whether the PTree is empty.
 null :: PTree a -> Bool
 null Tip = True
 null _   = False
 
+-- | Determines if the supplied key is an element in the supplied PTree.
 member :: Key -> PTree a -> Bool
 member k t = case lookup k t of
     Just _  -> True
     Nothing -> False
 
+-- | Determines if the supplied key is NOT an element in the supplied PTree.
 notMember :: Key -> PTree a -> Bool
 notMember k = not . member k
 
+-- | /O(n)/ Return all elements in the PTree.
 keys :: PTree a -> [Key]
 keys = foldr step []
     where step k _ = (k:)
 
+-- | /O(n)/ Converts the PTree to a list of key/value pairs.
 toList :: PTree a -> [(Key, a)]
 toList = foldr (\k v -> ((k,v):)) []
 
+-- | /O(n)/ Right-folds the values in the PTree.
 foldr :: (Key -> a -> b -> b) -> b -> PTree a -> b
 foldr = foldrNode S.empty
 
+-- | Inserts the given key/value pair into the PTree.
 insert :: Key -> a -> PTree a -> PTree a
 insert k v Tip = node k (Just v)
 insert k v n@(Node nk _ nc)
@@ -55,6 +98,7 @@ insert k v n@(Node nk _ nc)
             Just k' -> insertChild (insert k' v $ getChild k' nc) n
             Nothing -> join (node k (Just v)) n
 
+-- | Searches for the given key in the PTree.
 lookup :: Key -> PTree a -> Maybe a
 lookup _ Tip = Nothing
 lookup k (Node nk nv nc)
