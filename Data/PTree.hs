@@ -70,12 +70,12 @@ node k v = Node k v IM.empty
 
 trimPrefix :: Key -> Key -> Maybe Key
 trimPrefix x y
-    | x `S.isPrefixOf` y = Just $ trimPrefix' x y
+    | x `S.isPrefixOf` y = Just $ unsafeTrimPrefix x y
     | otherwise = Nothing
 
 -- Assumes prefix has already been checked
-trimPrefix' :: Key -> Key -> Key
-trimPrefix' = SU.unsafeDrop . S.length
+unsafeTrimPrefix :: Key -> Key -> Key
+unsafeTrimPrefix = SU.unsafeDrop . S.length
 
 join :: PTree a -> PTree a -> PTree a
 join (Node xk xv xc) (Node yk yv yc) = insertChild x' $ insertChild y' $ node ck Nothing
@@ -103,8 +103,8 @@ commonPrefix x y = (c, x', y')
             where
                 xc = SU.unsafeHead xa
                 yc = SU.unsafeHead ya
-        x' = trimPrefix' c x
-        y' = trimPrefix' c y
+        x' = unsafeTrimPrefix c x
+        y' = unsafeTrimPrefix c y
 
 {-# INLINE getChild #-}
 getChild :: Key -> Children a -> PTree a
