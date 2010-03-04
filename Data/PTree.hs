@@ -96,69 +96,54 @@ fromList = foldl' ins empty
 
 -- | /O(n)/ Right-folds the values in the PTree.
 foldr :: (Key -> a -> b -> b) -> b -> PTree a -> b
-foldr = foldrNode S.empty
+foldr _ z Tip = z
+foldr f z (Node k v c) = Prelude.foldr step z' $ map snd $ IM.toList c
     where
-        foldrNode :: Key -> (Key -> a -> b -> b) -> b -> PTree a -> b
-        foldrNode _ _ z Tip = z
-        foldrNode p f z (Node k v c) = Prelude.foldr step z' $ map snd $ IM.toList c
-            where
-                p' = p `S.append` k
-                z' = case v of
-                    Just v' -> f p' v' z
-                    Nothing -> z
-                step x a = foldrNode p' f a x
+        z' = case v of
+            Just x -> f k x z
+            Nothing -> z
+        step x a = foldr f a x
 
 -- | Inserts the given key/value pair into the PTree.
 insert :: Key -> a -> PTree a -> PTree a
 insert k v Tip = node k (Just v)
 insert k v n@(Node nk _ nc)
         | k == nk = Node nk (Just v) nc
-        | otherwise = case trimPrefix nk k of
-            Just k' -> insertChild (insert k' v $ getChild k' nc) n
-            Nothing -> join (node k (Just v)) n
+        | nk `S.isPrefixOf` k = insertChild (insert k v $ getChild (SU.unsafeIndex k (S.length nk)) nc) n
+        | otherwise = join (node k (Just v)) n
 
 -- | Searches for the given key in the PTree.
 lookup :: Key -> PTree a -> Maybe a
 lookup _ Tip = Nothing
 lookup k (Node nk nv nc)
         | k == nk = nv
-        | otherwise = case trimPrefix nk k of
-            Just k' -> lookup k' $ getChild k' nc
-            Nothing -> Nothing
+        | lk <= lnk = Nothing
+        | otherwise = lookup k $ getChild (SU.unsafeIndex k lnk) nc
+    where
+        lk = S.length k
+        lnk = S.length nk
 
 -- Helper Code
 
 node :: Key -> Maybe a -> PTree a
 node k v = Node k v IM.empty
 
-trimPrefix :: Key -> Key -> Maybe Key
-trimPrefix x y
-    | x `S.isPrefixOf` y = Just $ unsafeTrimPrefix x y
-    | otherwise = Nothing
-
--- Assumes prefix has already been checked
-unsafeTrimPrefix :: Key -> Key -> Key
-unsafeTrimPrefix = SU.unsafeDrop . S.length
-
 join :: PTree a -> PTree a -> PTree a
-join (Node xk xv xc) (Node yk yv yc) = insertChild x' $ insertChild y' $ node ck Nothing
+join x@(Node xk _ _) y@(Node yk _ _) = insertChild x $ insertChild y $ node ck Nothing
     where
-        (ck, xk', yk') = commonPrefix xk yk
-        x' = Node xk' xv xc
-        y' = Node yk' yv yc
+        ck= commonPrefix xk yk
 join _ _ = error "join: can't join Tip"
 
 insertChild :: PTree a -> PTree a -> PTree a
 insertChild x@(Node xk xv _) (Node yk yv yc)
-    | S.null xk = Node yk xv yc
-    | otherwise = Node yk yv (IM.insert (toChildKey xk) x yc)
+    | xk == yk = Node yk xv yc
+    | otherwise = Node yk yv (IM.insert (fromIntegral $ SU.unsafeIndex xk (S.length yk)) x yc)
 insertChild _ _ = error "insertChild: Cannot insert child for Tip"
 
-commonPrefix :: Key -> Key -> (Key, Key, Key)
-commonPrefix x y = (c, x', y')
+commonPrefix :: Key -> Key -> Key
+commonPrefix x y = S.unfoldr f (x, y)
     where
-        c = S.unfoldr f (x, y)
-        f :: (Key, Key) -> Maybe (Word8, (Key, Key))
+        f :: (Key, Key) -> (Maybe (Word8, (Key, Key)))
         f (xa, ya)
             | S.null xa || S.null ya = Nothing
             | xc == yc = Just (xc, (SU.unsafeTail xa, SU.unsafeTail ya))
@@ -166,12 +151,7 @@ commonPrefix x y = (c, x', y')
             where
                 xc = SU.unsafeHead xa
                 yc = SU.unsafeHead ya
-        x' = unsafeTrimPrefix c x
-        y' = unsafeTrimPrefix c y
 
 {-# INLINE getChild #-}
-getChild :: Key -> Children a -> PTree a
-getChild = IM.findWithDefault Tip . toChildKey
-
-toChildKey :: Key -> IM.Key
-toChildKey = fromIntegral . SU.unsafeHead
+getChild :: Word8 -> Children a -> PTree a
+getChild = IM.findWithDefault Tip . fromIntegral
