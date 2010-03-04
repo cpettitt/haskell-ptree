@@ -4,7 +4,11 @@ GHC_OPTS=-O
 SRC_DIR=`pwd`/..
 BUILD_DIR=`pwd`/build
 RESULTS_DIR=`pwd`/results
-TESTS="PTree Map Trie"
+
+if test "${TESTS}" == ""
+then
+    TESTS="PTree Map Trie"
+fi
 
 graph() {
 R -q --vanilla >/dev/null <<EOF
