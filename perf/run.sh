@@ -19,9 +19,9 @@ yl <- length(names(r))
 
 png("$1.png", width=700, height=400)
 par(xpd=T, mar=par()\$mar+c(0,0,0,5))
-matplot(r, type='p', pch='x', xaxt='n', ylab="Mean Time (s)", log="y")
+matplot(r, type='p', pch=23:25, xaxt='n', ylab="Mean Time (s)", log="y")
 axis(1, at=1:xl, labels=row.names(r))
-legend(xl * 1.05 , max(r), names(r), pch='x', col=1:yl )
+legend(xl * 1.05 , max(r), names(r), pch=23:25, col=1:yl )
 dev.off()
 EOF
 }
