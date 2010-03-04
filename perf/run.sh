@@ -1,5 +1,11 @@
 #!/bin/sh
 
+GHC_OPTS=-O
+SRC_DIR=`pwd`/..
+BUILD_DIR=`pwd`/build
+RESULTS_DIR=`pwd`/results
+TESTS="PTree Map Trie"
+
 graph() {
 R -q --vanilla >/dev/null <<EOF
 
@@ -16,12 +22,12 @@ dev.off()
 EOF
 }
 
-RESULTS_DIR=results
-TESTS="PTree Map Trie"
-
 if test "$NO_BENCH" == ""
 then
     # Cleanup results
+    rm -rf $BUILD_DIR
+    mkdir $BUILD_DIR
+
     rm -rf $RESULTS_DIR
     mkdir $RESULTS_DIR
 
@@ -29,11 +35,11 @@ then
     for t in $TESTS
     do
         echo Running benchmarks for: $t
-        ghc -O --make Bench$t.hs
+        ghc ${GHC_OPTS} --make Bench$t.hs -i${SRC_DIR} -odir ${BUILD_DIR} -hidir ${BUILD_DIR} -o ${BUILD_DIR}/Bench$t
         mkdir $RESULTS_DIR/$t
         pushd $RESULTS_DIR/$t
         ln -s ../../data
-        ../../Bench$t -k png -t png -u results.csv
+        $BUILD_DIR/Bench$t -k png -t png -u results.csv
         popd
     done
 fi
@@ -41,7 +47,7 @@ fi
 # Consolidate results
 TMP_RESULTS_DIR=$RESULTS_DIR/tmp
 mkdir $TMP_RESULTS_DIR
-for g in $(./Bench$(echo $TESTS | cut -d' ' -f1) -l | tail -n +2 | sed -E 's|([a-z]+)/.*|\1|' | sort | uniq)
+for g in $($BUILD_DIR/Bench$(echo $TESTS | cut -d' ' -f1) -l | tail -n +2 | sed -E 's|([a-z]+)/.*|\1|' | sort | uniq)
 do
     echo Consolidating benchmarks for group: $g
     for t in $TESTS
@@ -55,6 +61,3 @@ do
     graph $RESULTS_DIR/$g-results
 done
 rm -rf $TMP_RESULTS_DIR
-
-# Cleanup intermediates
-rm -f *.o *.hi
