@@ -50,6 +50,7 @@ fi
 
 # Consolidate results
 TMP_RESULTS_DIR=$RESULTS_DIR/tmp
+rm -rf $TMP_RESULTS_DIR
 mkdir $TMP_RESULTS_DIR
 for g in $($BUILD_DIR/Bench$(echo $TESTS | cut -d' ' -f1) -l | tail -n +2 | sed -E 's|([a-z]+)/.*|\1|' | sort | uniq)
 do
@@ -58,10 +59,13 @@ do
     do
         grep $g $RESULTS_DIR/$t/results.csv | cut -d',' -f2 > $TMP_RESULTS_DIR/$g-$t
     done
-    grep $g $RESULTS_DIR/$t/results.csv | cut -d',' -f1 > $TMP_RESULTS_DIR/$g-rows
+    for b in $(grep $g $RESULTS_DIR/$t/results.csv | cut -d',' -f1)
+    do
+        printf "%20s\n" $b >> $TMP_RESULTS_DIR/$g-rows
+    done
     GRP_RESULTS=$(echo $TESTS | sed -E "s|([A-Za-z]+)|$TMP_RESULTS_DIR/$g-\1|g")
-    echo "name\t$(echo $TESTS | tr ' ' '\t')" > $RESULTS_DIR/$g-results
+    echo -e "Name\t$(echo $TESTS | tr ' ' '\t')" > $RESULTS_DIR/$g-results
     paste $TMP_RESULTS_DIR/$g-rows $GRP_RESULTS >> $RESULTS_DIR/$g-results
     graph $RESULTS_DIR/$g-results
 done
-rm -rf $TMP_RESULTS_DIR
+#rm -rf $TMP_RESULTS_DIR
