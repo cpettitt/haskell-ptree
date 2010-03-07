@@ -15,6 +15,6 @@ Cabal-Version:          >=1.4
 Extra-Source-Files: test/Main.hs
 
 Library
-    Build-Depends:      base, bytestring, containers
+    Build-Depends:      base >= 3, base < 5, bytestring, containers
     Exposed-Modules:    Data.PTree
     Ghc-Options:        -Wall
