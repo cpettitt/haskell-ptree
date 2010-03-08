@@ -154,7 +154,7 @@ insertChild _ _ = error "insertChild: Cannot insert child for Tip"
 commonPrefix :: Key -> Key -> Key
 commonPrefix x y = S.unfoldr f (x, y)
     where
-        f :: (Key, Key) -> (Maybe (Word8, (Key, Key)))
+        f :: (Key, Key) -> Maybe (Word8, (Key, Key))
         f (xa, ya)
             | S.null xa || S.null ya = Nothing
             | xc == yc = Just (xc, (SU.unsafeTail xa, SU.unsafeTail ya))
