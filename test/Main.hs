@@ -25,6 +25,10 @@ instance CoArbitrary Key where
 
 type T = PTree Int
 
+prop_null_empty = null empty
+
+prop_null_not_empty (t :: T) = size t > 0 ==> not $ null t
+
 prop_member_empty k = notMember k empty
 
 prop_not_member (t :: T) k = not (notMember k t && member k t)
@@ -44,6 +48,8 @@ prop_size (t :: T) = length (toList t) == size t
 main = do
     let check s a = printf "%-25s: " s >> quickCheck a
 
+    check "null_empty"      prop_null_empty
+    check "null_not_empty"  prop_null_not_empty
     check "member_empty"    prop_member_empty
     check "not_member"      prop_not_member
     check "insert"          prop_insert
