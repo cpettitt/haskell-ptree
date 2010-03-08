@@ -165,6 +165,7 @@ join x@(Node xk _ _) y@(Node yk _ _)
         insertChild child key parent = updateChild (const child) parent key
 join _ _ = error "join: can't join Tip"
 
+{-# INLINE updateChild #-}
 updateChild :: (PTree a -> PTree a) -> PTree a -> Key -> PTree a
 updateChild f (Node pk pv pc) k = Node pk pv newChildren
     where
