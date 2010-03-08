@@ -129,15 +129,16 @@ node :: Key -> Maybe a -> PTree a
 node k v = Node k v IM.empty
 
 join :: PTree a -> PTree a -> PTree a
-join x@(Node xk _ _) y@(Node yk _ _) = insertChild x $ insertChild y $ node ck Nothing
+join x@(Node xk _ _) y@(Node yk _ _)
+        | xk == ck = insertChild y x
+        | yk == ck = insertChild x y
+        | otherwise = insertChild x $ insertChild y $ node ck Nothing
     where
-        ck= commonPrefix xk yk
+        ck = commonPrefix xk yk
 join _ _ = error "join: can't join Tip"
 
 insertChild :: PTree a -> PTree a -> PTree a
-insertChild x@(Node xk xv _) (Node yk yv yc)
-    | xk == yk = Node yk xv yc
-    | otherwise = Node yk yv (IM.insert (fromIntegral $ SU.unsafeIndex xk (S.length yk)) x yc)
+insertChild x@(Node xk xv _) (Node yk yv yc) = Node yk yv (IM.insert (fromIntegral $ SU.unsafeIndex xk (S.length yk)) x yc)
 insertChild _ _ = error "insertChild: Cannot insert child for Tip"
 
 commonPrefix :: Key -> Key -> Key
