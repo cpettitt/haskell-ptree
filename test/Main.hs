@@ -39,6 +39,8 @@ prop_keys (t :: T) = L.null (keys t \\ keyList) && L.null (keyList \\ keys t)
     where
         keyList = map fst $ toList t
 
+prop_size (t :: T) = length (toList t) == size t
+
 main = do
     let check s a = printf "%-25s: " s >> quickCheck a
 
@@ -48,3 +50,4 @@ main = do
     check "insert_idem"     prop_insert_idem
     check "from_to_list"    prop_from_to_list
     check "keys"            prop_keys
+    check "size"            prop_size

@@ -18,6 +18,7 @@ module Data.PTree (
 
         -- * Queries
         , null
+        , size
         , member
         , notMember
         , lookup
@@ -68,6 +69,10 @@ empty = Tip
 null :: PTree a -> Bool
 null Tip = True
 null _   = False
+
+-- | /O(n)/ Returns the number of elements in the PTree.
+size :: PTree a -> Int
+size = foldr (\_ _ a -> a + 1) 0
 
 -- | Determines if the supplied key is an element in the supplied PTree.
 member :: Key -> PTree a -> Bool
