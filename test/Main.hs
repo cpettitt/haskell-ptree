@@ -29,6 +29,8 @@ prop_null_empty = null empty
 
 prop_null_not_empty (t :: T) = size t > 0 ==> not $ null t
 
+prop_singleton k (v :: Int) = singleton k v == insert k v empty
+
 prop_member_empty k = notMember k empty
 
 prop_not_member (t :: T) k = not (notMember k t && member k t)

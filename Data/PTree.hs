@@ -15,6 +15,7 @@ module Data.PTree (
 
         -- * Construction
         , empty
+        , singleton
 
         -- * Queries
         , null
@@ -64,6 +65,10 @@ instance (Eq a) => Eq (PTree a) where
 -- | /O(1)/ Constructs an empty PTree.
 empty :: PTree a
 empty = Tip
+
+-- | /O(1)/ Constructs a PTree with a single element.
+singleton :: Key -> a -> PTree a
+singleton k v = node k (Just v)
 
 -- | /O(1)/ Tests whether the PTree is empty.
 null :: PTree a -> Bool
