@@ -12,6 +12,7 @@ type DataPTree = P.PTree Int
 instance Map DataPTree where
     empty = P.empty
     insert = P.insert
+    delete = P.delete
     lookup k = fromJust . P.lookup k
     keys = P.keys
 

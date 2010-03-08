@@ -39,6 +39,11 @@ prop_insert (t :: T) k v = lookup k (insert k v t) == Just v
 
 prop_insert_idem (t :: T) k v = insert k v t == insert k v (insert k v t)
 
+prop_delete (t :: T) = (not $ null t) ==> let k = head $ keys t in
+    notMember k (delete k t)
+
+prop_insert_delete (t :: T) k v = notMember k t ==> (delete k $ insert k v t) == t
+
 prop_from_to_list (t :: T) = fromList (toList t) == t
 
 prop_keys (t :: T) = L.null (keys t \\ keyList) && L.null (keyList \\ keys t)
@@ -56,6 +61,8 @@ main = do
     check "not_member"      prop_not_member
     check "insert"          prop_insert
     check "insert_idem"     prop_insert_idem
+    check "delete"          prop_delete
+    check "insert_delete"   prop_insert_delete
     check "from_to_list"    prop_from_to_list
     check "keys"            prop_keys
     check "size"            prop_size

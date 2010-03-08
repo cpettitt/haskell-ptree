@@ -12,6 +12,7 @@ type DataTrie = T.Trie Int
 instance Map DataTrie where
     empty = T.empty
     insert = T.insert
+    delete = T.delete
     lookup k = fromJust . T.lookup k
     keys = T.keys
 

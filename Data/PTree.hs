@@ -27,6 +27,9 @@ module Data.PTree (
         -- * Insertion
         , insert
 
+        -- * Deletion
+        , delete
+
         -- * Folds
         , foldr
 
@@ -50,6 +53,7 @@ import qualified Prelude
 -- | The key type for PTrees.
 type Key = S.ByteString
 
+type ChildKey = IM.Key
 type Children a = IM.IntMap (PTree a)
 
 -- | A map of ByteStrings to values.
@@ -119,8 +123,20 @@ insert :: Key -> a -> PTree a -> PTree a
 insert k v Tip = node k (Just v)
 insert k v n@(Node nk _ nc)
         | k == nk = Node nk (Just v) nc
-        | nk `S.isPrefixOf` k = insertChild (insert k v $ getChild (SU.unsafeIndex k (S.length nk)) nc) n
+        | nk `S.isPrefixOf` k = updateChild (insert k v) n k
         | otherwise = join (node k (Just v)) n
+
+-- | Removes the given key from the PTree
+delete :: Key -> PTree a -> PTree a
+delete _ Tip = Tip
+delete k n@(Node nk _ nc)
+        | k == nk = if IM.null nc
+                        then Tip
+                        else if IM.size nc == 1
+                            then snd $ head $ IM.toList nc
+                            else Node nk Nothing nc
+        | nk `S.isPrefixOf` k = updateChild (delete k) n k
+        | otherwise = n
 
 -- | Searches for the given key in the PTree.
 lookup :: Key -> PTree a -> Maybe a
@@ -128,7 +144,7 @@ lookup _ Tip = Nothing
 lookup k (Node nk nv nc)
         | k == nk = nv
         | lk <= lnk = Nothing
-        | otherwise = lookup k $ getChild (SU.unsafeIndex k lnk) nc
+        | otherwise = lookup k $ getChild (getChildKey k lnk) nc
     where
         lk = S.length k
         lnk = S.length nk
@@ -140,16 +156,24 @@ node k v = Node k v IM.empty
 
 join :: PTree a -> PTree a -> PTree a
 join x@(Node xk _ _) y@(Node yk _ _)
-        | xk == ck = insertChild y x
-        | yk == ck = insertChild x y
-        | otherwise = insertChild x $ insertChild y $ node ck Nothing
+        | xk == ck = insertChild y yk x
+        | yk == ck = insertChild x xk y
+        | otherwise = insertChild x xk $ insertChild y yk $ node ck Nothing
     where
         ck = commonPrefix xk yk
+        insertChild :: PTree a -> Key -> PTree a -> PTree a
+        insertChild child key parent = updateChild (const child) parent key
 join _ _ = error "join: can't join Tip"
 
-insertChild :: PTree a -> PTree a -> PTree a
-insertChild x@(Node xk xv _) (Node yk yv yc) = Node yk yv (IM.insert (fromIntegral $ SU.unsafeIndex xk (S.length yk)) x yc)
-insertChild _ _ = error "insertChild: Cannot insert child for Tip"
+updateChild :: (PTree a -> PTree a) -> PTree a -> Key -> PTree a
+updateChild f (Node pk pv pc) k = Node pk pv newChildren
+    where
+        childKey = getChildKey k (S.length pk)
+        child = getChild childKey pc
+        newChildren = case f child of
+            Tip -> IM.delete childKey pc
+            n   -> IM.insert childKey n pc
+updateChild _ Tip _ = error "updateChild: can't update child of Tip"
 
 commonPrefix :: Key -> Key -> Key
 commonPrefix x y = S.unfoldr f (x, y)
@@ -163,6 +187,10 @@ commonPrefix x y = S.unfoldr f (x, y)
                 xc = SU.unsafeHead xa
                 yc = SU.unsafeHead ya
 
+{-# INLINE getChildKey #-}
+getChildKey :: Key -> Int -> ChildKey
+getChildKey k = fromIntegral . SU.unsafeIndex k
+
 {-# INLINE getChild #-}
-getChild :: Word8 -> Children a -> PTree a
-getChild = IM.findWithDefault Tip . fromIntegral
+getChild :: ChildKey -> Children a -> PTree a
+getChild = IM.findWithDefault Tip

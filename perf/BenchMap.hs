@@ -13,6 +13,7 @@ type DataMap   = M.Map C.ByteString Int
 instance Map DataMap where
     empty = M.empty
     insert = M.insert
+    delete = M.delete
     lookup k = fromJust . M.lookup k
     keys = M.keys
 

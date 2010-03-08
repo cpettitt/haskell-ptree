@@ -8,6 +8,7 @@ import Prelude hiding (lookup)
 class Map a where
     empty :: a
     insert :: C.ByteString -> Int -> a -> a
+    delete :: C.ByteString -> a -> a
     lookup :: C.ByteString -> a -> Int
     keys :: a -> [C.ByteString]
 
@@ -24,6 +25,10 @@ benchLookup xs m = putStrLn $ show $ foldl' (\a x -> lookup x m + a) 0 xs
 --   Map.
 benchKeys :: (Map a) => a -> IO ()
 benchKeys m = putStrLn $ show $ length $ keys m
+
+-- | Benchmark the delete operation over all keys in the Map.
+benchDelete :: (Map a) => [C.ByteString] -> a -> IO ()
+benchDelete xs m = putStrLn . show . length . keys $ foldl' (\a x -> delete x a) m xs
 
 -- | Inserts every string from [C.ByteString] into the supplied Map.
 insertStrings :: (Map a) => [C.ByteString] -> a -> a
@@ -42,6 +47,7 @@ commonMain e = do
     let ckf = zip3 testConfigs keys fullMaps
     defaultMain
                 [ bgroup "insert" $ map (\(c, xs, _) -> bench c $ benchInsert xs e) ckf
+                , bgroup "delete" $ map (\(c, xs, fm) -> bench c $ benchDelete xs fm) ckf
                 , bgroup "lookup" $ map (\(c, xs, fm) -> bench c $ benchLookup xs fm) ckf
                 , bgroup "keys"   $ map (\(c, _, fm) -> bench c $ benchKeys fm) ckf
                 ]
