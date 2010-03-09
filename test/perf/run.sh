@@ -1,7 +1,7 @@
 #!/bin/sh
 
 GHC_OPTS=-O
-SRC_DIR=`pwd`/..
+SRC_DIR=`pwd`/../..
 BUILD_DIR=`pwd`/build
 RESULTS_DIR=`pwd`/results
 

@@ -1,5 +1,5 @@
 BUILD_DIR=build
-SRC_DIR=..
+SRC_DIR=../..
 DIST_DIR=dist
 GHC_OPTS=-i${SRC_DIR} -odir ${BUILD_DIR} -hidir ${BUILD_DIR}
 
