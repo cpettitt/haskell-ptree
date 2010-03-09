@@ -44,6 +44,8 @@ prop_delete (t :: T) = (not $ null t) ==> let k = head $ keys t in
 
 prop_insert_delete (t :: T) k v = notMember k t ==> (delete k $ insert k v t) == t
 
+prop_find_with_default (t :: T) k def = notMember k t ==> findWithDefault def k t == def
+
 prop_from_to_list (t :: T) = fromList (toList t) == t
 
 prop_keys (t :: T) = L.null (keys t \\ keyList) && L.null (keyList \\ keys t)
@@ -55,14 +57,15 @@ prop_size (t :: T) = length (toList t) == size t
 main = do
     let check s a = printf "%-25s: " s >> quickCheck a
 
-    check "null_empty"      prop_null_empty
-    check "null_not_empty"  prop_null_not_empty
-    check "member_empty"    prop_member_empty
-    check "not_member"      prop_not_member
-    check "insert"          prop_insert
-    check "insert_idem"     prop_insert_idem
-    check "delete"          prop_delete
-    check "insert_delete"   prop_insert_delete
-    check "from_to_list"    prop_from_to_list
-    check "keys"            prop_keys
-    check "size"            prop_size
+    check "null_empty"          prop_null_empty
+    check "null_not_empty"      prop_null_not_empty
+    check "member_empty"        prop_member_empty
+    check "not_member"          prop_not_member
+    check "insert"              prop_insert
+    check "insert_idem"         prop_insert_idem
+    check "delete"              prop_delete
+    check "insert_delete"       prop_insert_delete
+    check "find_with_default"   prop_find_with_default
+    check "from_to_list"        prop_from_to_list
+    check "keys"                prop_keys
+    check "size"                prop_size

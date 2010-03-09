@@ -5,7 +5,8 @@
 -- License     :  MIT
 -- Maintainer  :  cpettitt@gmail.com
 --
--- An efficient implementation of maps from @ByteString@s to values.
+-- A Patricia tree implementation that maps arbitrary length ByteStrings to
+-- values.
 --
 -----------------------------------------------------------------------------
 
@@ -18,11 +19,13 @@ module Data.PTree (
         , singleton
 
         -- * Queries
+        , (!)
         , null
         , size
         , member
         , notMember
         , lookup
+        , findWithDefault
 
         -- * Insertion
         , insert
@@ -73,6 +76,13 @@ empty = Tip
 -- | /O(1)/ Constructs a PTree with a single element.
 singleton :: Key -> a -> PTree a
 singleton k v = node k (Just v)
+
+-- | Find the value for the given key.
+--   Calls 'error' when the key is not in the PTree
+(!) :: PTree a -> Key -> a
+t ! k = case lookup k t of
+    Nothing -> error $ "PTree.!: key " ++ show k ++ " is not an element of this PTree"
+    Just v  -> v
 
 -- | /O(1)/ Tests whether the PTree is empty.
 null :: PTree a -> Bool
@@ -149,6 +159,13 @@ lookup k (Node nk nv nc)
         lk = S.length k
         lnk = S.length nk
 
+-- | Searches for the value for the given key. If the key is not in the PTree
+--   then the default value is returned.
+findWithDefault :: a -> Key -> PTree a -> a
+findWithDefault def k m = case lookup k m of
+    Nothing -> def
+    Just v  -> v
+
 -- Helper Code
 
 node :: Key -> Maybe a -> PTree a
@@ -163,7 +180,7 @@ join x@(Node xk _ _) y@(Node yk _ _)
         ck = commonPrefix xk yk
         insertChild :: PTree a -> Key -> PTree a -> PTree a
         insertChild child key parent = updateChild (const child) parent key
-join _ _ = error "join: can't join Tip"
+join _ _ = error "PTree.join: can't join Tip"
 
 {-# INLINE updateChild #-}
 updateChild :: (PTree a -> PTree a) -> PTree a -> Key -> PTree a
@@ -174,7 +191,7 @@ updateChild f (Node pk pv pc) k = Node pk pv newChildren
         newChildren = case f child of
             Tip -> IM.delete childKey pc
             n   -> IM.insert childKey n pc
-updateChild _ Tip _ = error "updateChild: can't update child of Tip"
+updateChild _ Tip _ = error "PTree.updateChild: can't update child of Tip"
 
 commonPrefix :: Key -> Key -> Key
 commonPrefix x y = S.unfoldr f (x, y)
