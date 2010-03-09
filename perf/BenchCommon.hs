@@ -1,34 +1,39 @@
 module BenchCommon (Map(..), commonMain) where
 
+import Control.Parallel.Strategies (NFData(..))
 import Criterion.Main
 import qualified Data.ByteString.Char8 as C
 import Data.List (foldl')
-import Prelude hiding (lookup)
+import Prelude hiding (lookup, null)
 
 class Map a where
     empty :: a
+    null :: a -> Bool
     insert :: C.ByteString -> Int -> a -> a
     delete :: C.ByteString -> a -> a
     lookup :: C.ByteString -> a -> Int
     keys :: a -> [C.ByteString]
 
--- | Inserts every string from [C.ByteString] to the supplied Map.
-benchInsert :: (Map a) => [C.ByteString] -> a -> IO ()
-benchInsert xs m = return (insertStrings xs m) >>= putStrLn . show . lookup (head xs)
+instance NFData C.ByteString where
+    rnf x = x `seq` ()
 
 -- | Performs a single lookup in the supplied map for every key in
 --   [C.ByteString].
-benchLookup :: (Map a) => [C.ByteString] -> a -> IO ()
-benchLookup xs m = putStrLn $ show $ foldl' (\a x -> lookup x m + a) 0 xs
+benchLookup :: (Map a) => [C.ByteString] -> a -> Int
+benchLookup xs m = foldl' (\a x -> lookup x m + a) 0 xs
+
+-- | Inserts every string from [C.ByteString] to the supplied Map.
+benchInsert :: (Map a) => [C.ByteString] -> a -> Bool
+benchInsert xs = null . insertStrings xs
+
+-- | Benchmark the delete operation over all keys in the Map.
+benchDelete :: (Map a) => [C.ByteString] -> a -> Bool
+benchDelete xs m = null $ foldl' (\a x -> delete x a) m xs
 
 -- | Benchmarks the time it takes to retrieve all keys from the supplied
 --   Map.
-benchKeys :: (Map a) => a -> IO ()
-benchKeys m = putStrLn $ show $ length $ keys m
-
--- | Benchmark the delete operation over all keys in the Map.
-benchDelete :: (Map a) => [C.ByteString] -> a -> IO ()
-benchDelete xs m = putStrLn . show . length . keys $ foldl' (\a x -> delete x a) m xs
+benchKeys :: (Map a) => a -> [C.ByteString]
+benchKeys m = keys m
 
 -- | Inserts every string from [C.ByteString] into the supplied Map.
 insertStrings :: (Map a) => [C.ByteString] -> a -> a
@@ -46,8 +51,8 @@ commonMain e = do
     let fullMaps = map (\x -> let !sx = insertStrings (map C.copy x) e in sx) keys
     let ckf = zip3 testConfigs keys fullMaps
     defaultMain
-                [ bgroup "insert" $ map (\(c, xs, _) -> bench c $ benchInsert xs e) ckf
-                , bgroup "delete" $ map (\(c, xs, fm) -> bench c $ benchDelete xs fm) ckf
-                , bgroup "lookup" $ map (\(c, xs, fm) -> bench c $ benchLookup xs fm) ckf
-                , bgroup "keys"   $ map (\(c, _, fm) -> bench c $ benchKeys fm) ckf
+                [ bgroup "lookup" $ map (\(c, xs, fm) -> bench c $ nf (benchLookup xs) fm) ckf
+                , bgroup "insert" $ map (\(c, xs, _)  -> bench c $ nf (benchInsert xs) e) ckf
+                , bgroup "delete" $ map (\(c, xs, fm) -> bench c $ nf (benchDelete xs) fm) ckf
+                , bgroup "keys"   $ map (\(c, _, fm)  -> bench c $ nf benchKeys fm) ckf
                 ]

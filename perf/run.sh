@@ -43,7 +43,7 @@ then
         mkdir $RESULTS_DIR/$t
         pushd $RESULTS_DIR/$t
         ln -s ../../data
-        $BUILD_DIR/Bench$t -k png -t png -u results.csv
+        $BUILD_DIR/Bench$t -g -v -k png -t png -u results.csv
         popd
     done
 fi
@@ -68,4 +68,4 @@ do
     paste $TMP_RESULTS_DIR/$g-rows $GRP_RESULTS >> $RESULTS_DIR/$g-results
     graph $RESULTS_DIR/$g-results
 done
-#rm -rf $TMP_RESULTS_DIR
+rm -rf $TMP_RESULTS_DIR
