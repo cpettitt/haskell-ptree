@@ -121,7 +121,7 @@ fromList = foldl' ins empty
 -- | /O(n)/ Right-folds the values in the PTree.
 foldr :: (Key -> a -> b -> b) -> b -> PTree a -> b
 foldr _ z Tip = z
-foldr f z (Node k v c) = Prelude.foldr step z' $ map snd $ IM.toList c
+foldr f z (Node k v c) = IM.fold step z' c
     where
         z' = case v of
             Just x -> f k x z
