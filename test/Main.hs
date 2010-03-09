@@ -2,28 +2,19 @@
 
 module Main where
 
-import Control.Monad (liftM)
 import qualified Data.ByteString.Char8 as C
 import Data.List ((\\))
-import qualified Data.List as L
+import qualified Data.Map as M
 import Data.PTree
+
 import Prelude hiding (lookup, null)
+import qualified Prelude
+
 import Test.QuickCheck
+
 import Text.Printf
 
-instance Arbitrary a => Arbitrary (PTree a) where
-    arbitrary = liftM fromList arbitrary
-
-instance CoArbitrary a => CoArbitrary (PTree a) where
-    coarbitrary = coarbitrary . toList
-
-instance Arbitrary Key where
-    arbitrary = C.pack `fmap` listOf (choose ('a', 'z'))
-
-instance CoArbitrary Key where
-    coarbitrary = coarbitrary . C.unpack
-
-type T = PTree Int
+import QuickCheckUtils
 
 prop_null_empty = null empty
 
@@ -48,7 +39,7 @@ prop_find_with_default (t :: T) k def = notMember k t ==> findWithDefault def k 
 
 prop_from_to_list (t :: T) = fromList (toList t) == t
 
-prop_keys (t :: T) = L.null (keys t \\ keyList) && L.null (keyList \\ keys t)
+prop_keys (t :: T) = Prelude.null (keys t \\ keyList) && Prelude.null (keyList \\ keys t)
     where
         keyList = map fst $ toList t
 

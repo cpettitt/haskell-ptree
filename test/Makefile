@@ -3,7 +3,7 @@ SRC_DIR=..
 DIST_DIR=dist
 GHC_OPTS=-i${SRC_DIR} -odir ${BUILD_DIR} -hidir ${BUILD_DIR}
 
-Main:
+Main: clean
 	@rm -rf ${DIST_DIR}
 	mkdir ${DIST_DIR}
 	ghc ${GHC_OPTS} -fhpc --make Main.hs -o ${DIST_DIR}/Main
