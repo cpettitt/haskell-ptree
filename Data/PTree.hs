@@ -49,6 +49,7 @@ import qualified Data.ByteString.Unsafe as SU
 import Data.Function (on)
 import qualified Data.IntMap as IM
 import Data.List (foldl')
+import Data.Maybe (fromMaybe)
 import Data.Word
 import Prelude hiding (foldr, lookup, null)
 import qualified Prelude
@@ -80,9 +81,9 @@ singleton k v = node k (Just v)
 -- | Find the value for the given key.
 --   Calls 'error' when the key is not in the PTree
 (!) :: PTree a -> Key -> a
-t ! k = case lookup k t of
-    Nothing -> error $ "PTree.!: key " ++ show k ++ " is not an element of this PTree"
-    Just v  -> v
+t ! k = fromMaybe
+            (error $ "PTree.!: key " ++ show k ++ " is not an element of this PTree")
+            (lookup k t)
 
 -- | /O(1)/ Tests whether the PTree is empty.
 null :: PTree a -> Bool
@@ -116,7 +117,7 @@ toList = foldr (\k v -> ((k,v):)) []
 fromList :: [(Key, a)] -> PTree a
 fromList = foldl' ins empty
     where
-        ins m (k, v) = insert k v m
+        ins t (k, v) = insert k v t
 
 -- | /O(n)/ Right-folds the values in the PTree.
 foldr :: (Key -> a -> b -> b) -> b -> PTree a -> b
@@ -162,9 +163,7 @@ lookup k (Node nk nv nc)
 -- | Searches for the value for the given key. If the key is not in the PTree
 --   then the default value is returned.
 findWithDefault :: a -> Key -> PTree a -> a
-findWithDefault def k m = case lookup k m of
-    Nothing -> def
-    Just v  -> v
+findWithDefault def k t = fromMaybe def (lookup k t)
 
 -- Helper Code
 
