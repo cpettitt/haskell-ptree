@@ -26,6 +26,7 @@ module Data.PTree (
         , notMember
         , lookup
         , findWithDefault
+        , prefixes
 
         -- * Insertion
         , insert
@@ -164,6 +165,24 @@ lookup k (Node nk nv nc)
 --   then the default value is returned.
 findWithDefault :: a -> Key -> PTree a -> a
 findWithDefault def k t = fromMaybe def (lookup k t)
+
+-- | Returns all keys in this PTree that are a prefix of the given Key.
+--
+-- > sort (prefixes "roman" (fromList [("roman", 1), ("romans", 2), ("roma", 3)])) == ["roma", "roman"]
+prefixes :: Key -> PTree a -> [Key]
+prefixes k t = go k t []
+    where
+        go :: Key -> PTree a -> [Key] -> [Key]
+        go k Tip a = a
+        go k (Node nk nv nc) a
+            | (S.length k) < lnk = a
+            | nk `S.isPrefixOf` k = case nv of
+                Nothing -> next a
+                Just _  -> next (nk:a)
+            | otherwise = a 
+                where
+                    lnk = S.length nk
+                    next = go k (getChild (getChildKey k lnk) nc)
 
 -- Helper Code
 

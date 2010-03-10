@@ -2,6 +2,7 @@
 
 module QuickCheckUtils where
 
+import Control.Arrow (first)
 import Control.Monad (liftM)
 
 import qualified Data.ByteString.Char8 as C
@@ -76,3 +77,6 @@ listEq3 f g = eq3 (\x' y' l' -> sortList . P.toList $ f x' y' l')
                   (\x' y' l' -> sortList . M.toList $ g x' y' l')
 
 sortList = sortBy (comparing fst)
+
+fromStrList :: [(String, Int)] -> T
+fromStrList = P.fromList . map (first C.pack)

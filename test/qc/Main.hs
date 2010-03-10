@@ -3,7 +3,7 @@
 module Main where
 
 import qualified Data.ByteString.Char8 as C
-import Data.List ((\\))
+import Data.List (sort)
 import qualified Data.Map as M
 import qualified Data.PTree as P
 
@@ -44,11 +44,16 @@ prop_findWithDefault (t :: T) k def = P.notMember k t ==> P.findWithDefault def 
 
 prop_bang (t :: T) k v = (P.insert k v t) P.! k == v
 
-prop_keys (t :: T) = null (P.keys t \\ keyList) && null (keyList \\ P.keys t)
+prop_keys (t :: T) = sort (P.keys t) == sort (keyList)
     where
         keyList = map fst $ P.toList t
 
 prop_size (t :: T) = length (P.toList t) == P.size t
+
+prop_prefix1 = sort (P.prefixes (C.pack "roman") t) == map C.pack ["roma", "roman"]
+    where
+        t = fromStrList [("roman", 1), ("romans", 2), ("roma", 3)]
+prop_prefix2 (t :: T) k = sort (P.prefixes k t) == sort (filter (flip C.isPrefixOf k) (P.keys t))
 
 main = do
     let check s a = printf "%-25s: " s >> quickCheck a
@@ -83,3 +88,5 @@ main = do
     check "bang"                 prop_bang
     check "keys"                 prop_keys
     check "size"                 prop_size
+    check "prefix1"              prop_prefix1
+    check "prefix2"              prop_prefix2
