@@ -34,7 +34,7 @@ module Data.PTree (
         , delete
 
         -- * Folds
-        , foldr
+        , foldWithKey
 
         -- * Conversions
         , keys
@@ -92,7 +92,7 @@ null _   = False
 
 -- | /O(n)/ Returns the number of elements in the PTree.
 size :: PTree a -> Int
-size = foldr (\_ _ a -> a + 1) 0
+size = foldWithKey (\_ _ a -> a + 1) 0
 
 -- | Determines if the supplied key is an element in the supplied PTree.
 member :: Key -> PTree a -> Bool
@@ -106,12 +106,12 @@ notMember k = not . member k
 
 -- | /O(n)/ Return all elements in the PTree.
 keys :: PTree a -> [Key]
-keys = foldr step []
+keys = foldWithKey step []
     where step k _ = (k:)
 
 -- | /O(n)/ Converts the PTree to a list of key/value pairs.
 toList :: PTree a -> [(Key, a)]
-toList = foldr (\k v -> ((k,v):)) []
+toList = foldWithKey (\k v -> ((k,v):)) []
 
 -- | Create a PTree from a list of key/value pairs.
 fromList :: [(Key, a)] -> PTree a
@@ -119,15 +119,15 @@ fromList = foldl' ins empty
     where
         ins t (k, v) = insert k v t
 
--- | /O(n)/ Right-folds the values in the PTree.
-foldr :: (Key -> a -> b -> b) -> b -> PTree a -> b
-foldr _ z Tip = z
-foldr f z (Node k v c) = IM.fold step z' c
+-- | /O(n)/ Folds the values in the PTree.
+foldWithKey :: (Key -> a -> b -> b) -> b -> PTree a -> b
+foldWithKey _ z Tip = z
+foldWithKey f z (Node k v c) = IM.fold step z' c
     where
         z' = case v of
             Just x -> f k x z
             Nothing -> z
-        step x a = foldr f a x
+        step x a = foldWithKey f a x
 
 -- | Inserts the given key/value pair into the PTree.
 insert :: Key -> a -> PTree a -> PTree a
