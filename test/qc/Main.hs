@@ -42,6 +42,8 @@ prop_delete (t :: T) = not (P.null t) ==> let k = head $ P.keys t in
 
 prop_findWithDefault (t :: T) k def = P.notMember k t ==> P.findWithDefault def k t == def
 
+prop_bang (t :: T) k v = (P.insert k v t) P.! k == v
+
 prop_keys (t :: T) = null (P.keys t \\ keyList) && null (keyList \\ P.keys t)
     where
         keyList = map fst $ P.toList t
@@ -78,5 +80,6 @@ main = do
     check "insert"               prop_insert
     check "delete"               prop_delete
     check "findWithDefault"      prop_findWithDefault
+    check "bang"                 prop_bang
     check "keys"                 prop_keys
     check "size"                 prop_size
