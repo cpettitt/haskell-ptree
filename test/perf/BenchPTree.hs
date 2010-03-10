@@ -16,6 +16,7 @@ instance Map DataPTree where
     delete = P.delete
     lookup k = fromJust . P.lookup k
     keys = P.keys
+    prefixes = P.prefixes
 
 main :: IO ()
 main = commonMain (empty :: DataPTree)

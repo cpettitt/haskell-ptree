@@ -13,6 +13,7 @@ class Map a where
     delete :: C.ByteString -> a -> a
     lookup :: C.ByteString -> a -> Int
     keys :: a -> [C.ByteString]
+    prefixes :: C.ByteString -> a -> [C.ByteString]
 
 instance NFData C.ByteString where
     rnf x = x `seq` ()
@@ -35,6 +36,10 @@ benchDelete xs m = null $ foldl' (\a x -> delete x a) m xs
 benchKeys :: (Map a) => a -> [C.ByteString]
 benchKeys m = keys m
 
+-- | Benchmarks the time it takes to look up all prefixes of a key.
+benchPrefixes :: (Map a)  => a -> [C.ByteString]
+benchPrefixes m = prefixes (C.pack "apprenticeship") m
+
 -- | Inserts every string from [C.ByteString] into the supplied Map.
 insertStrings :: (Map a) => [C.ByteString] -> a -> a
 insertStrings xs m = foldl' (\a x -> insert x 1 a) m xs
@@ -51,8 +56,9 @@ commonMain e = do
     let fullMaps = map (\x -> let !sx = insertStrings (map C.copy x) e in sx) keys
     let ckf = zip3 testConfigs keys fullMaps
     defaultMain
-                [ bgroup "lookup" $ map (\(c, xs, fm) -> bench c $ nf (benchLookup xs) fm) ckf
-                , bgroup "insert" $ map (\(c, xs, _)  -> bench c $ nf (benchInsert xs) e) ckf
-                , bgroup "delete" $ map (\(c, xs, fm) -> bench c $ nf (benchDelete xs) fm) ckf
-                , bgroup "keys"   $ map (\(c, _, fm)  -> bench c $ nf benchKeys fm) ckf
+                [ bgroup "lookup"   $ map (\(c, xs, fm) -> bench c $ nf (benchLookup xs) fm) ckf
+                , bgroup "insert"   $ map (\(c, xs, _)  -> bench c $ nf (benchInsert xs) e) ckf
+                , bgroup "delete"   $ map (\(c, xs, fm) -> bench c $ nf (benchDelete xs) fm) ckf
+                , bgroup "keys"     $ map (\(c, _, fm)  -> bench c $ nf benchKeys fm) ckf
+                , bgroup "prefixes" $ map (\(c, _, fm)  -> bench c $ nf benchPrefixes fm) ckf
                 ]

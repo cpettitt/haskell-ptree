@@ -17,6 +17,12 @@ instance Map DataMap where
     delete = M.delete
     lookup k = fromJust . M.lookup k
     keys = M.keys
+    prefixes k m = prefixes' k m []
+        where
+            prefixes' k m a
+                | C.null k = a
+                | M.member k m = prefixes' (C.take (C.length k - 1) k) m (k:a)
+                | otherwise    = prefixes' (C.take (C.length k - 1) k) m a
 
 main :: IO ()
 main = commonMain (empty :: DataMap)
