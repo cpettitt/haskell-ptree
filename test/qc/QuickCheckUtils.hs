@@ -5,11 +5,15 @@ module QuickCheckUtils where
 import Control.Monad (liftM)
 
 import qualified Data.ByteString.Char8 as C
+import Data.List (sortBy)
+import qualified Data.Map as M
+import Data.Ord (comparing)
 import qualified Data.PTree as P
 
 import Test.QuickCheck
 
 type T = P.PTree Int
+type M = M.Map P.Key Int
 type L = [(P.Key, Int)]
 
 instance Arbitrary a => Arbitrary (P.PTree a) where
@@ -23,3 +27,52 @@ instance Arbitrary P.Key where
 
 instance CoArbitrary P.Key where
     coarbitrary = coarbitrary . C.unpack
+
+eq1 :: (Eq a) => (T -> a)
+              -> (M -> a)
+              -> [(P.Key, Int)]
+              -> Bool
+eq1 f g l = f t == g m
+    where
+        t = P.fromList l
+        m = M.fromList l
+
+eq2 :: (Eq a) => (b -> T -> a)
+              -> (b -> M -> a)
+              -> b
+              -> [(P.Key, Int)]
+              -> Bool
+eq2 f g x l = f x t == g x m
+    where
+        t = P.fromList l
+        m = M.fromList l
+
+eq3 :: (Eq a) => (b -> c -> T -> a)
+              -> (b -> c -> M -> a)
+              -> b
+              -> c
+              -> [(P.Key, Int)]
+              -> Bool
+eq3 f g x y l = f x y t == g x y m
+    where
+        t = P.fromList l
+        m = M.fromList l
+
+listEq2 :: (b -> T -> T)
+        -> (b -> M -> M)
+        -> b
+        -> [(P.Key, Int)]
+        -> Bool
+listEq2 f g = eq2 (\x' l' -> sortList . P.toList $ f x' l')
+                  (\x' l' -> sortList . M.toList $ g x' l')
+
+listEq3 :: (b -> c -> T -> T)
+        -> (b -> c -> M -> M)
+        -> b
+        -> c
+        -> [(P.Key, Int)]
+        -> Bool
+listEq3 f g = eq3 (\x' y' l' -> sortList . P.toList $ f x' y' l')
+                  (\x' y' l' -> sortList . M.toList $ g x' y' l')
+
+sortList = sortBy (comparing fst)

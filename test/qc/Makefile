@@ -15,7 +15,7 @@ hpc-report: test
 	hpc report Main --exclude=Main
 
 hpc-markup: test
-	hpc markup Main --exclude=Main --destdir=${DIST_DIR}
+	hpc markup Main --exclude=Main --exclude QuickCheckUtils --destdir=${DIST_DIR}
 	@echo Find the report at ${DIST_DIR}/hpc_index.html
 
 clean:

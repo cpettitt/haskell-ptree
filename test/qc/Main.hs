@@ -5,10 +5,7 @@ module Main where
 import qualified Data.ByteString.Char8 as C
 import Data.List ((\\))
 import qualified Data.Map as M
-import Data.PTree
-
-import Prelude hiding (lookup, null)
-import qualified Prelude
+import qualified Data.PTree as P
 
 import Test.QuickCheck
 
@@ -16,47 +13,70 @@ import Text.Printf
 
 import QuickCheckUtils
 
-prop_null_empty = null empty
+prop_modelNull            = P.null            `eq1`     M.null
+prop_modelMember          = P.member          `eq2`     M.member
+prop_modelNotMember       = P.notMember       `eq2`     M.notMember
+prop_modelInsert          = P.insert          `listEq3` M.insert
+prop_modelDelete          = P.delete          `listEq2` M.delete
+prop_modelFindWithDefault = P.findWithDefault `eq3`     M.findWithDefault
+prop_modelSize            = P.size            `eq1`     M.size
 
-prop_null_not_empty (t :: T) = size t > 0 ==> not $ null t
+prop_idemInsert (t :: T) k v = P.insert k v t == P.insert k v (P.insert k v t)
+prop_idemDelete (t :: T) k   = P.delete k t == P.delete k (P.delete k t)
 
-prop_singleton k (v :: Int) = singleton k v == insert k v empty
+prop_revInsert (t :: T) k v = P.notMember k t ==> P.delete k (P.insert k v t) == t
+prop_revToList (t :: T)     = P.fromList (P.toList t) == t
 
-prop_member_empty k = notMember k empty
+prop_null1          = P.null P.empty
+prop_null2 (t :: T) = P.size t > 0 ==> not $ P.null t
 
-prop_not_member (t :: T) k = not (notMember k t && member k t)
+prop_singleton k (v :: Int) = P.singleton k v == P.insert k v P.empty
 
-prop_insert (t :: T) k v = lookup k (insert k v t) == Just v
+prop_member1 k = P.notMember k P.empty
+prop_member2 (t :: T) k = not (P.notMember k t && P.member k t)
 
-prop_insert_idem (t :: T) k v = insert k v t == insert k v (insert k v t)
+prop_insert (t :: T) k v = P.lookup k (P.insert k v t) == Just v
 
-prop_delete (t :: T) = (not $ null t) ==> let k = head $ keys t in
-    notMember k (delete k t)
+prop_delete (t :: T) = not (P.null t) ==> let k = head $ P.keys t in
+    P.notMember k (P.delete k t)
 
-prop_insert_delete (t :: T) k v = notMember k t ==> (delete k $ insert k v t) == t
+prop_findWithDefault (t :: T) k def = P.notMember k t ==> P.findWithDefault def k t == def
 
-prop_find_with_default (t :: T) k def = notMember k t ==> findWithDefault def k t == def
-
-prop_from_to_list (t :: T) = fromList (toList t) == t
-
-prop_keys (t :: T) = Prelude.null (keys t \\ keyList) && Prelude.null (keyList \\ keys t)
+prop_keys (t :: T) = null (P.keys t \\ keyList) && null (keyList \\ P.keys t)
     where
-        keyList = map fst $ toList t
+        keyList = map fst $ P.toList t
 
-prop_size (t :: T) = length (toList t) == size t
+prop_size (t :: T) = length (P.toList t) == P.size t
 
 main = do
     let check s a = printf "%-25s: " s >> quickCheck a
+    let group s = putStrLn "" >> putStrLn s >> putStrLn (replicate (length s) '=')
 
-    check "null_empty"          prop_null_empty
-    check "null_not_empty"      prop_null_not_empty
-    check "member_empty"        prop_member_empty
-    check "not_member"          prop_not_member
-    check "insert"              prop_insert
-    check "insert_idem"         prop_insert_idem
-    check "delete"              prop_delete
-    check "insert_delete"       prop_insert_delete
-    check "find_with_default"   prop_find_with_default
-    check "from_to_list"        prop_from_to_list
-    check "keys"                prop_keys
-    check "size"                prop_size
+    group "Model Tests"
+    check "modelNull"            prop_modelNull
+    check "modelMember"          prop_modelMember
+    check "modelNotMember"       prop_modelNotMember
+    check "modelInsert"          prop_modelInsert
+    check "modelDelete"          prop_modelDelete
+    check "modelFindWithDefault" prop_modelFindWithDefault
+    check "modelSize"            prop_modelSize
+
+    group "Idempotent Tests"
+    check "idemInsert"           prop_idemInsert
+    check "idemDelete"           prop_idemDelete
+
+    group "Reversible Tests"
+    check "revInsert"            prop_revInsert
+    check "revToList"            prop_revToList
+
+    group "Other Tests"
+    check "null1"                prop_null1
+    check "null2"                prop_null2
+    check "singleton"            prop_singleton
+    check "member1"              prop_member1
+    check "member2"              prop_member2
+    check "insert"               prop_insert
+    check "delete"               prop_delete
+    check "findWithDefault"      prop_findWithDefault
+    check "keys"                 prop_keys
+    check "size"                 prop_size
