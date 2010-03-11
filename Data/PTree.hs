@@ -39,6 +39,7 @@ module Data.PTree (
         , delete
 
         -- * Folds
+        , fold
         , foldWithKey
 
         -- * Conversions
@@ -124,6 +125,10 @@ fromList = foldl' ins empty
         ins t (k, v) = insert k v t
 
 -- | /O(n)/ Folds the values in the PTree.
+fold :: (a -> b -> b) -> b -> PTree a -> b
+fold f = foldWithKey (\_ -> f)
+
+-- | /O(n)/ Folds the keys and values in the PTree.
 foldWithKey :: (Key -> a -> b -> b) -> b -> PTree a -> b
 foldWithKey _ z Tip = z
 foldWithKey f z (Node k v c) = IM.fold step z' c
@@ -142,7 +147,7 @@ insert k v n@(Node nk _ nc)
         | otherwise = join (node k (Just v)) n
 
 -- | Inserts with the given function which combines the new value with an old
---   value. @'insertWith' f key  value tree@ will insert @value@ into the
+--   value. @'insertWith' f key value tree@ will insert @value@ into the
 --   @tree@ if it does not contain @key@. If it does contain @key@, the function
 --   will insert the value @f value old_value@.
 insertWith :: (a -> a -> a) -> Key -> a -> PTree a -> PTree a
@@ -152,10 +157,10 @@ insertWith f = insertWithKey (\_ -> f)
 insertWith' :: (a -> a -> a) -> Key -> a -> PTree a -> PTree a
 insertWith' f = insertWithKey' (\_ -> f)
 
--- | Inserts with the given function which combines the new value with an old
---   value. @'insertWith' f key  value tree@ will insert @value@ into the
+-- | Inserts with the given function which combines the key, new value, and old
+--   value. @'insertWithKey' f key value tree@ will insert @value@ into the
 --   @tree@ if it does not contain @key@. If it does contain @key@, the function
---   will insert the value @f value old_value@.
+--   will insert the value @f key value old_value@.
 insertWithKey :: (Key -> a -> a -> a) -> Key -> a -> PTree a -> PTree a
 insertWithKey _ k v Tip = node k (Just v)
 insertWithKey f k v n@(Node nk nv nc)
