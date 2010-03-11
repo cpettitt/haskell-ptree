@@ -5,35 +5,51 @@
 -- License     :  MIT
 -- Maintainer  :  cpettitt@gmail.com
 --
--- A Patricia tree implementation that maps arbitrary length ByteStrings to
--- values.
+-- An efficient Patricia tree implementation that maps strict 'ByteString's
+-- to values.
 --
+-- The interface for this module is intended to look similar to that for
+-- 'Data.Map' and 'Data.IntMap', where appropriate. It differs from
+-- 'Data.Map' in the restriction of the key type to 'ByteString's, its
+-- functions for looking up all prefixes of a key, and improved looked up
+-- performance. It differs from 'Data.IntMap' in that it supports variable
+-- length keys.
+--
+-- This module is intended to be imported @qualified@ to avoid clashes with
+-- functions exported in 'Prelude'. For example:
+--
+-- > import qualified Data.PTree as P
+--
+-- Function comments include the Big-O time complexity. In many cases a
+-- function has a worst-time complexity of /O(min(n, S))/. This means that
+-- the function's time complexity is linear with respect to the minimum
+-- of either /n/, the number of elements in the tree, or /S/, the length of
+-- the 'ByteString' supplied as a key to the function.
 -----------------------------------------------------------------------------
 
 module Data.PTree (
         -- * Types
           PTree, Key
 
-        -- * Construction
+        -- * Constructors
         , empty
         , singleton
 
-        -- * Queries
+        -- * Operators
         , (!)
+
+        -- * Queries
         , null
         , size
         , member
         , notMember
         , lookup
         , findWithDefault
-        , prefixes
 
         -- * Insertion
         , insert
-        , insertWith
-        , insertWith'
-        , insertWithKey
-        , insertWithKey'
+        , insertWith, insertWith'
+        , insertWithKey, insertWithKey'
 
         -- * Deletion
         , delete
@@ -44,6 +60,7 @@ module Data.PTree (
 
         -- * Conversions
         , keys
+        , prefixes
 
         -- * Lists
         , toList
@@ -59,15 +76,20 @@ import Data.Maybe (fromMaybe)
 import Data.Word
 import Prelude hiding (foldr, lookup, null)
 
+
+{--------------------------------------------------------------------
+  Types
+--------------------------------------------------------------------}
+
+-- | A map of ByteStrings to values.
+data PTree a = Tip
+             | Node {-# UNPACK #-} !Key (Maybe a) !(Children a)
+
 -- | The key type for PTrees.
 type Key = S.ByteString
 
 type ChildKey = IM.Key
 type Children a = IM.IntMap (PTree a)
-
--- | A map of ByteStrings to values.
-data PTree a = Tip
-             | Node {-# UNPACK #-} !Key (Maybe a) !(Children a)
 
 instance (Show a) => Show (PTree a) where
     show = showString "fromList " . show . toList
@@ -75,20 +97,32 @@ instance (Show a) => Show (PTree a) where
 instance (Eq a) => Eq (PTree a) where
     (==) = (==) `on` toList
 
--- | /O(1)/ Constructs an empty PTree.
+{--------------------------------------------------------------------
+  Constructors
+--------------------------------------------------------------------}
+
+-- | /O(1)/ Constructs an empty tree.
 empty :: PTree a
 empty = Tip
 
--- | /O(1)/ Constructs a PTree with a single element.
+-- | /O(1)/ Constructs a tree with a single element.
 singleton :: Key -> a -> PTree a
 singleton k v = node k (Just v)
 
--- | Find the value for the given key.
---   Calls 'error' when the key is not in the PTree
+{--------------------------------------------------------------------
+  Operators
+--------------------------------------------------------------------}
+
+-- | /O(min(n, S))/ Find the value for the given key. Calls 'error'
+--   when the key is not in the PTree
 (!) :: PTree a -> Key -> a
 t ! k = fromMaybe
             (error $ "PTree.!: key " ++ show k ++ " is not an element of this PTree")
             (lookup k t)
+
+{--------------------------------------------------------------------
+  Queries
+--------------------------------------------------------------------}
 
 -- | /O(1)/ Tests whether the PTree is empty.
 null :: PTree a -> Bool
@@ -99,30 +133,101 @@ null _   = False
 size :: PTree a -> Int
 size = foldWithKey (\_ _ a -> a + 1) 0
 
--- | Determines if the supplied key is an element in the supplied PTree.
+-- | /O(min(n, S))/ Determines if the supplied key is an element in
+--   the supplied PTree.
 member :: Key -> PTree a -> Bool
 member k t = case lookup k t of
     Just _  -> True
     Nothing -> False
 
--- | Determines if the supplied key is NOT an element in the supplied PTree.
+-- | /O(min(n, S))/ Determines if the supplied key is NOT an element
+--   in the supplied PTree.
 notMember :: Key -> PTree a -> Bool
 notMember k = not . member k
 
--- | /O(n)/ Return all elements in the PTree in ascending order.
-keys :: PTree a -> [Key]
-keys = foldWithKey step []
-    where step k _ = (k:)
-
--- | /O(n)/ Converts the PTree to a list of key/value pairs in ascending order.
-toList :: PTree a -> [(Key, a)]
-toList = foldWithKey (\k v -> ((k,v):)) []
-
--- | Create a PTree from a list of key/value pairs.
-fromList :: [(Key, a)] -> PTree a
-fromList = foldl' ins empty
+-- | /O(min(n, S))/ Searches for the given key in the PTree.
+lookup :: Key -> PTree a -> Maybe a
+lookup _ Tip = Nothing
+lookup k (Node nk nv nc)
+        | k == nk = nv
+        | lk <= lnk = Nothing
+        | otherwise = lookup k $ getChild (getChildKey k lnk) nc
     where
-        ins t (k, v) = insert k v t
+        lk = S.length k
+        lnk = S.length nk
+
+-- | /O(min(n, S))/ Searches for the value for the given key. If the
+--   key is not in the PTree then the default value is returned.
+findWithDefault :: a -> Key -> PTree a -> a
+findWithDefault def k t = fromMaybe def (lookup k t)
+
+{--------------------------------------------------------------------
+  Insertion
+--------------------------------------------------------------------}
+
+-- | /O(min(n, S))/ Inserts the given key/value pair into the PTree.
+insert :: Key -> a -> PTree a -> PTree a
+insert k v Tip = node k (Just v)
+insert k v n@(Node nk _ nc)
+        | k == nk = Node nk (Just v) nc
+        | nk `S.isPrefixOf` k = updateChild (insert k v) n k
+        | otherwise = join (node k (Just v)) n
+
+-- | /O(min(n, S))/ Inserts with the given function which combines
+--   the new value with an old value. @'insertWith' f key value tree@
+--   will insert @value@ into the @tree@ if it does not contain @key@.
+--   If it does contain @key@, the function will insert the value @f
+--   value old_value@.
+insertWith :: (a -> a -> a) -> Key -> a -> PTree a -> PTree a
+insertWith f = insertWithKey (\_ -> f)
+
+-- | /O(min(n, S))/ Strict version of 'insertWith'
+insertWith' :: (a -> a -> a) -> Key -> a -> PTree a -> PTree a
+insertWith' f = insertWithKey' (\_ -> f)
+
+-- | /O(min(n, S))/ Inserts with the given function which combines
+--   the key, new value, and old value. @'insertWithKey' f key value
+--   tree@ will insert @value@ into the @tree@ if it does not contain
+--   @key@. If it does contain @key@, the function will insert the
+--   value @f key value old_value@.
+insertWithKey :: (Key -> a -> a -> a) -> Key -> a -> PTree a -> PTree a
+insertWithKey _ k v Tip = node k (Just v)
+insertWithKey f k v n@(Node nk nv nc)
+        | k == nk = case nv of
+            Nothing -> Node nk (Just v) nc
+            Just x  -> Node nk (Just $ f k v x) nc
+        | nk `S.isPrefixOf` k = updateChild (insertWithKey f k v) n k
+        | otherwise = join (node k (Just v)) n
+
+-- | /O(min(n, S))/ Strict version of 'insertWithKey'
+insertWithKey' :: (Key -> a -> a -> a) -> Key -> a -> PTree a -> PTree a
+insertWithKey' _ k v Tip = node k (Just v)
+insertWithKey' f k v n@(Node nk nv nc)
+        | k == nk = case nv of
+            Nothing -> Node nk (Just v) nc
+            Just x  -> let x' = f k v x in x' `seq` Node nk (Just x') nc
+        | nk `S.isPrefixOf` k = updateChild (insertWithKey' f k v) n k
+        | otherwise = join (node k (Just v)) n
+
+{--------------------------------------------------------------------
+  Deletion
+--------------------------------------------------------------------}
+
+-- | /O(min(n, S))/ Removes the given key from the PTree
+delete :: Key -> PTree a -> PTree a
+delete _ Tip = Tip
+delete k n@(Node nk _ nc)
+        | k == nk = if IM.null nc
+                        then Tip
+                        else if IM.size nc == 1
+                            then snd $ head $ IM.toList nc
+                            else Node nk Nothing nc
+        | nk `S.isPrefixOf` k = updateChild (delete k) n k
+        | otherwise = n
+
+{--------------------------------------------------------------------
+  Folds
+--------------------------------------------------------------------}
 
 -- | /O(n)/ Folds the values in the PTree.
 fold :: (a -> b -> b) -> b -> PTree a -> b
@@ -138,78 +243,17 @@ foldWithKey f z (Node k v c) = case v of
         children = IM.fold step z c
         step x a = foldWithKey f a x
 
--- | Inserts the given key/value pair into the PTree.
-insert :: Key -> a -> PTree a -> PTree a
-insert k v Tip = node k (Just v)
-insert k v n@(Node nk _ nc)
-        | k == nk = Node nk (Just v) nc
-        | nk `S.isPrefixOf` k = updateChild (insert k v) n k
-        | otherwise = join (node k (Just v)) n
+{--------------------------------------------------------------------
+  Conversions
+--------------------------------------------------------------------}
 
--- | Inserts with the given function which combines the new value with an old
---   value. @'insertWith' f key value tree@ will insert @value@ into the
---   @tree@ if it does not contain @key@. If it does contain @key@, the function
---   will insert the value @f value old_value@.
-insertWith :: (a -> a -> a) -> Key -> a -> PTree a -> PTree a
-insertWith f = insertWithKey (\_ -> f)
+-- | /O(n)/ Return all elements in the PTree in ascending order.
+keys :: PTree a -> [Key]
+keys = foldWithKey step []
+    where step k _ = (k:)
 
--- | Strict version of 'insertWith'
-insertWith' :: (a -> a -> a) -> Key -> a -> PTree a -> PTree a
-insertWith' f = insertWithKey' (\_ -> f)
-
--- | Inserts with the given function which combines the key, new value, and old
---   value. @'insertWithKey' f key value tree@ will insert @value@ into the
---   @tree@ if it does not contain @key@. If it does contain @key@, the function
---   will insert the value @f key value old_value@.
-insertWithKey :: (Key -> a -> a -> a) -> Key -> a -> PTree a -> PTree a
-insertWithKey _ k v Tip = node k (Just v)
-insertWithKey f k v n@(Node nk nv nc)
-        | k == nk = case nv of
-            Nothing -> Node nk (Just v) nc
-            Just x  -> Node nk (Just $ f k v x) nc
-        | nk `S.isPrefixOf` k = updateChild (insertWithKey f k v) n k
-        | otherwise = join (node k (Just v)) n
-
--- | Strict version of 'insertWithKey'
-insertWithKey' :: (Key -> a -> a -> a) -> Key -> a -> PTree a -> PTree a
-insertWithKey' _ k v Tip = node k (Just v)
-insertWithKey' f k v n@(Node nk nv nc)
-        | k == nk = case nv of
-            Nothing -> Node nk (Just v) nc
-            Just x  -> let x' = f k v x in x' `seq` Node nk (Just x') nc
-        | nk `S.isPrefixOf` k = updateChild (insertWithKey' f k v) n k
-        | otherwise = join (node k (Just v)) n
-
--- | Removes the given key from the PTree
-delete :: Key -> PTree a -> PTree a
-delete _ Tip = Tip
-delete k n@(Node nk _ nc)
-        | k == nk = if IM.null nc
-                        then Tip
-                        else if IM.size nc == 1
-                            then snd $ head $ IM.toList nc
-                            else Node nk Nothing nc
-        | nk `S.isPrefixOf` k = updateChild (delete k) n k
-        | otherwise = n
-
--- | Searches for the given key in the PTree.
-lookup :: Key -> PTree a -> Maybe a
-lookup _ Tip = Nothing
-lookup k (Node nk nv nc)
-        | k == nk = nv
-        | lk <= lnk = Nothing
-        | otherwise = lookup k $ getChild (getChildKey k lnk) nc
-    where
-        lk = S.length k
-        lnk = S.length nk
-
--- | Searches for the value for the given key. If the key is not in the PTree
---   then the default value is returned.
-findWithDefault :: a -> Key -> PTree a -> a
-findWithDefault def k t = fromMaybe def (lookup k t)
-
--- | Returns all keys in this PTree that are a prefix of the given Key. The
---   keys are returned in ascending order.
+-- | /O(min(n, S))/ Returns all keys in this PTree that are a prefix
+--   of the given Key. The keys are returned in ascending order.
 --
 -- > prefixes "roman" (fromList [("roman", 1), ("romans", 2), ("roma", 3)]) == ["roma", "roman"]
 prefixes :: Key -> PTree a -> [Key]
@@ -227,7 +271,24 @@ prefixes k t = reverse $ go k t []
                     lnk = S.length nk
                     next = go k' (getChild (getChildKey k' lnk) nc)
 
--- Helper Code
+{--------------------------------------------------------------------
+  Lists
+--------------------------------------------------------------------}
+
+-- | /O(n)/ Converts the PTree to a list of key/value pairs in
+--  ascending order.
+toList :: PTree a -> [(Key, a)]
+toList = foldWithKey (\k v -> ((k,v):)) []
+
+-- | /O(n)/ Create a PTree from a list of key/value pairs.
+fromList :: [(Key, a)] -> PTree a
+fromList = foldl' ins empty
+    where
+        ins t (k, v) = insert k v t
+
+{--------------------------------------------------------------------
+  Helpers
+--------------------------------------------------------------------}
 
 node :: Key -> Maybe a -> PTree a
 node k v = Node k v IM.empty
