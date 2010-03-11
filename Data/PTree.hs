@@ -213,20 +213,19 @@ findWithDefault def k t = fromMaybe def (lookup k t)
 --
 -- > prefixes "roman" (fromList [("roman", 1), ("romans", 2), ("roma", 3)]) == ["roma", "roman"]
 prefixes :: Key -> PTree a -> [Key]
-prefixes k t = go k t []
+prefixes k t = reverse $ go k t []
     where
         go :: Key -> PTree a -> [Key] -> [Key]
         go _ Tip a = a
         go k' (Node nk nv nc) a
-            | S.length k < lnk = done
+            | S.length k < lnk = a
             | nk `S.isPrefixOf` k' = case nv of
                 Nothing -> next a
                 Just _  -> next (nk:a)
-            | otherwise = done
+            | otherwise = a
                 where
                     lnk = S.length nk
                     next = go k' (getChild (getChildKey k' lnk) nc)
-                    done = reverse a
 
 -- Helper Code
 
