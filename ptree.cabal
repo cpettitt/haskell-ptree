@@ -6,13 +6,22 @@ Author:                 Chris Pettitt
 Maintainer:             cpettitt@gmail.com
 Copyright:              Copyright (c) 2010 Chris Pettitt
 Category:               Data, Data Structures
-Synopsis:               Patricia tree implementation
-Description:            Patricia tree implementation
+Synopsis:               An efficient Patricia tree implementation for 'ByteString' keys.
+Description:
+    An efficient Patricia tree implementation that maps strict 'ByteString's
+    to values.
+    .
+    The interface for this module is intended to look similar to that for
+    'Data.Map' and 'Data.IntMap', where appropriate. It differs from
+    'Data.Map' in the restriction of the key type to 'ByteString's, its
+    functions for looking up all prefixes of a key, and improved looked up
+    performance. It differs from 'Data.IntMap' in that it supports variable
+    length keys.
 
 Build-Type:             Simple
 Cabal-Version:          >=1.4
 
-Extra-Source-Files: test/Main.hs
+Extra-Source-Files: README test/Main.hs
 
 Library
     Build-Depends:      base >= 3, base < 5, bytestring, containers
