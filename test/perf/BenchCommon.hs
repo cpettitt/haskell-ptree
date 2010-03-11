@@ -29,26 +29,26 @@ benchInsert xs = null . insertStrings xs
 
 -- | Benchmark the delete operation over all keys in the Map.
 benchDelete :: (Map a) => [C.ByteString] -> a -> Bool
-benchDelete xs m = null $ foldl' (\a x -> delete x a) m xs
+benchDelete xs m = null $ foldl' (flip delete) m xs
 
 -- | Benchmarks the time it takes to retrieve all keys from the supplied
 --   Map.
 benchKeys :: (Map a) => a -> [C.ByteString]
-benchKeys m = keys m
+benchKeys = keys
 
 -- | Benchmarks the time it takes to look up all prefixes of a key.
 benchPrefixes :: (Map a)  => a -> [C.ByteString]
-benchPrefixes m = prefixes (C.pack "apprenticeship") m
+benchPrefixes = prefixes $ C.pack "apprenticeship"
 
 -- | Inserts every string from [C.ByteString] into the supplied Map.
 insertStrings :: (Map a) => [C.ByteString] -> a -> a
 insertStrings xs m = foldl' (\a x -> insert x 1 a) m xs
 
-loadData :: String -> IO ([C.ByteString])
-loadData f = C.readFile ("data/" ++ f ++ ".data") >>= return . C.lines
+loadData :: String -> IO [C.ByteString]
+loadData f = fmap C.lines $ C.readFile ("data/" ++ f ++ ".data")
 
 testConfigs :: [String]
-testConfigs = [ (t ++ "-" ++ (show n) ++ "k") | t <- ["seq", "rnd"], n <- [1, 10] ]
+testConfigs = [ t ++ "-" ++ show n ++ "k" | t <- ["seq", "rnd"], n <- [1, 10] ]
 
 commonMain :: (Map a) => a -> IO ()
 commonMain e = do
