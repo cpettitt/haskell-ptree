@@ -30,6 +30,10 @@ module Data.PTree (
 
         -- * Insertion
         , insert
+        , insertWith
+        , insertWith'
+        , insertWithKey
+        , insertWithKey'
 
         -- * Deletion
         , delete
@@ -53,7 +57,6 @@ import Data.List (foldl')
 import Data.Maybe (fromMaybe)
 import Data.Word
 import Prelude hiding (foldr, lookup, null)
-import qualified Prelude
 
 -- | The key type for PTrees.
 type Key = S.ByteString
@@ -138,6 +141,40 @@ insert k v n@(Node nk _ nc)
         | nk `S.isPrefixOf` k = updateChild (insert k v) n k
         | otherwise = join (node k (Just v)) n
 
+-- | Inserts with the given function which combines the new value with an old
+--   value. @'insertWith' f key  value tree@ will insert @value@ into the
+--   @tree@ if it does not contain @key@. If it does contain @key@, the function
+--   will insert the value @f value old_value@.
+insertWith :: (a -> a -> a) -> Key -> a -> PTree a -> PTree a
+insertWith f = insertWithKey (\_ -> f)
+
+-- | Strict version of 'insertWith'
+insertWith' :: (a -> a -> a) -> Key -> a -> PTree a -> PTree a
+insertWith' f = insertWithKey' (\_ -> f)
+
+-- | Inserts with the given function which combines the new value with an old
+--   value. @'insertWith' f key  value tree@ will insert @value@ into the
+--   @tree@ if it does not contain @key@. If it does contain @key@, the function
+--   will insert the value @f value old_value@.
+insertWithKey :: (Key -> a -> a -> a) -> Key -> a -> PTree a -> PTree a
+insertWithKey _ k v Tip = node k (Just v)
+insertWithKey f k v n@(Node nk nv nc)
+        | k == nk = case nv of
+            Nothing -> Node nk (Just v) nc
+            Just x  -> Node nk (Just $ f k v x) nc
+        | nk `S.isPrefixOf` k = updateChild (insertWithKey f k v) n k
+        | otherwise = join (node k (Just v)) n
+
+-- | Strict version of 'insertWithKey'
+insertWithKey' :: (Key -> a -> a -> a) -> Key -> a -> PTree a -> PTree a
+insertWithKey' _ k v Tip = node k (Just v)
+insertWithKey' f k v n@(Node nk nv nc)
+        | k == nk = case nv of
+            Nothing -> Node nk (Just v) nc
+            Just x  -> let x' = f k v x in x' `seq` Node nk (Just x') nc
+        | nk `S.isPrefixOf` k = updateChild (insertWithKey' f k v) n k
+        | otherwise = join (node k (Just v)) n
+
 -- | Removes the given key from the PTree
 delete :: Key -> PTree a -> PTree a
 delete _ Tip = Tip
@@ -173,16 +210,16 @@ prefixes :: Key -> PTree a -> [Key]
 prefixes k t = go k t []
     where
         go :: Key -> PTree a -> [Key] -> [Key]
-        go k Tip a = a
-        go k (Node nk nv nc) a
-            | (S.length k) < lnk = a
-            | nk `S.isPrefixOf` k = case nv of
+        go _ Tip a = a
+        go k' (Node nk nv nc) a
+            | S.length k < lnk = a
+            | nk `S.isPrefixOf` k' = case nv of
                 Nothing -> next a
                 Just _  -> next (nk:a)
             | otherwise = a 
                 where
                     lnk = S.length nk
-                    next = go k (getChild (getChildKey k lnk) nc)
+                    next = go k' (getChild (getChildKey k' lnk) nc)
 
 -- Helper Code
 

@@ -20,6 +20,10 @@ prop_modelInsert          = P.insert          `listEq3` M.insert
 prop_modelDelete          = P.delete          `listEq2` M.delete
 prop_modelFindWithDefault = P.findWithDefault `eq3`     M.findWithDefault
 prop_modelSize            = P.size            `eq1`     M.size
+prop_modelInsertWith      = P.insertWith      `listEq4` M.insertWith $ (+)
+prop_modelInsertWith'     = P.insertWith'     `listEq4` M.insertWith' $ (+)
+prop_modelInsertWithKey   = P.insertWithKey   `listEq4` M.insertWithKey $ (\k v v' -> C.length k + v + v')
+prop_modelInsertWithKey'  = P.insertWithKey'  `listEq4` M.insertWithKey' $ (\k v v' -> C.length k + v + v')
 
 prop_idemInsert (t :: T) k v = P.insert k v t == P.insert k v (P.insert k v t)
 prop_idemDelete (t :: T) k   = P.delete k t == P.delete k (P.delete k t)
@@ -55,6 +59,10 @@ prop_prefix1 = sort (P.prefixes (C.pack "roman") t) == map C.pack ["roma", "roma
         t = fromStrList [("roman", 1), ("romans", 2), ("roma", 3)]
 prop_prefix2 (t :: T) k = sort (P.prefixes k t) == sort (filter (flip C.isPrefixOf k) (P.keys t))
 
+prop_insertWith (t :: T) k v v2 = P.insertWith (+) k v2 (P.insert k v t) P.! k == v + v2
+
+prop_insertWith' (t :: T) k v v2 = P.insertWith' (+) k v2 (P.insert k v t) P.! k == v + v2
+
 main = do
     let check s a = printf "%-25s: " s >> quickCheck a
     let group s = putStrLn "" >> putStrLn s >> putStrLn (replicate (length s) '=')
@@ -67,6 +75,10 @@ main = do
     check "modelDelete"          prop_modelDelete
     check "modelFindWithDefault" prop_modelFindWithDefault
     check "modelSize"            prop_modelSize
+    check "modelInsertWith"      prop_modelInsertWith
+    check "modelInsertWith'"     prop_modelInsertWith'
+    check "modelInsertWithKey"   prop_modelInsertWithKey
+    check "modelInsertWithKey'"  prop_modelInsertWithKey'
 
     group "Idempotent Tests"
     check "idemInsert"           prop_idemInsert
@@ -90,3 +102,5 @@ main = do
     check "size"                 prop_size
     check "prefix1"              prop_prefix1
     check "prefix2"              prop_prefix2
+    check "insertWith"           prop_insertWith
+    check "insertWith'"          prop_insertWith'

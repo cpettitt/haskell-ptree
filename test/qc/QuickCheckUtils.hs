@@ -59,6 +59,18 @@ eq3 f g x y l = f x y t == g x y m
         t = P.fromList l
         m = M.fromList l
 
+eq4 :: (Eq a) => (b -> c -> d -> T -> a)
+              -> (b -> c -> d -> M -> a)
+              -> b
+              -> c
+              -> d
+              -> [(P.Key, Int)]
+              -> Bool
+eq4 f g x y z l = f x y z t == g x y z m
+    where
+        t = P.fromList l
+        m = M.fromList l
+
 listEq2 :: (b -> T -> T)
         -> (b -> M -> M)
         -> b
@@ -75,6 +87,16 @@ listEq3 :: (b -> c -> T -> T)
         -> Bool
 listEq3 f g = eq3 (\x' y' l' -> sortList . P.toList $ f x' y' l')
                   (\x' y' l' -> sortList . M.toList $ g x' y' l')
+
+listEq4 :: (b -> c -> d -> T -> T)
+        -> (b -> c -> d -> M -> M)
+        -> b
+        -> c
+        -> d
+        -> [(P.Key, Int)]
+        -> Bool
+listEq4 f g = eq4 (\x' y' z' l' -> sortList . P.toList $ f x' y' z' l')
+                  (\x' y' z' l' -> sortList . M.toList $ g x' y' z' l')
 
 sortList = sortBy (comparing fst)
 
