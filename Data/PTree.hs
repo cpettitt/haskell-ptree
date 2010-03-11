@@ -109,12 +109,12 @@ member k t = case lookup k t of
 notMember :: Key -> PTree a -> Bool
 notMember k = not . member k
 
--- | /O(n)/ Return all elements in the PTree.
+-- | /O(n)/ Return all elements in the PTree in ascending order.
 keys :: PTree a -> [Key]
 keys = foldWithKey step []
     where step k _ = (k:)
 
--- | /O(n)/ Converts the PTree to a list of key/value pairs.
+-- | /O(n)/ Converts the PTree to a list of key/value pairs in ascending order.
 toList :: PTree a -> [(Key, a)]
 toList = foldWithKey (\k v -> ((k,v):)) []
 
@@ -131,11 +131,11 @@ fold f = foldWithKey (\_ -> f)
 -- | /O(n)/ Folds the keys and values in the PTree.
 foldWithKey :: (Key -> a -> b -> b) -> b -> PTree a -> b
 foldWithKey _ z Tip = z
-foldWithKey f z (Node k v c) = IM.fold step z' c
+foldWithKey f z (Node k v c) = case v of
+            Nothing -> children
+            Just x  -> f k x children
     where
-        z' = case v of
-            Just x -> f k x z
-            Nothing -> z
+        children = IM.fold step z c
         step x a = foldWithKey f a x
 
 -- | Inserts the given key/value pair into the PTree.
@@ -208,23 +208,25 @@ lookup k (Node nk nv nc)
 findWithDefault :: a -> Key -> PTree a -> a
 findWithDefault def k t = fromMaybe def (lookup k t)
 
--- | Returns all keys in this PTree that are a prefix of the given Key.
+-- | Returns all keys in this PTree that are a prefix of the given Key. The
+--   keys are returned in ascending order.
 --
--- > sort (prefixes "roman" (fromList [("roman", 1), ("romans", 2), ("roma", 3)])) == ["roma", "roman"]
+-- > prefixes "roman" (fromList [("roman", 1), ("romans", 2), ("roma", 3)]) == ["roma", "roman"]
 prefixes :: Key -> PTree a -> [Key]
 prefixes k t = go k t []
     where
         go :: Key -> PTree a -> [Key] -> [Key]
         go _ Tip a = a
         go k' (Node nk nv nc) a
-            | S.length k < lnk = a
+            | S.length k < lnk = done
             | nk `S.isPrefixOf` k' = case nv of
                 Nothing -> next a
                 Just _  -> next (nk:a)
-            | otherwise = a 
+            | otherwise = done
                 where
                     lnk = S.length nk
                     next = go k' (getChild (getChildKey k' lnk) nc)
+                    done = reverse a
 
 -- Helper Code
 

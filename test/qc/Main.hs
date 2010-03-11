@@ -16,6 +16,7 @@ import QuickCheckUtils
 prop_modelNull            = P.null            `eq1`     M.null
 prop_modelMember          = P.member          `eq2`     M.member
 prop_modelNotMember       = P.notMember       `eq2`     M.notMember
+prop_modelKeys            = P.keys            `eq1`     M.keys
 prop_modelInsert          = P.insert          `listEq3` M.insert
 prop_modelDelete          = P.delete          `listEq2` M.delete
 prop_modelFindWithDefault = P.findWithDefault `eq3`     M.findWithDefault
@@ -48,9 +49,9 @@ prop_delete (t :: T) = not (P.null t) ==> let k = head $ P.keys t in
 
 prop_findWithDefault (t :: T) k def = P.notMember k t ==> P.findWithDefault def k t == def
 
-prop_bang (t :: T) k v = (P.insert k v t) P.! k == v
+prop_bang (t :: T) k v = P.insert k v t P.! k == v
 
-prop_keys (t :: T) = sort (P.keys t) == sort (keyList)
+prop_keys (t :: T) = P.keys t == keyList
     where
         keyList = map fst $ P.toList t
 
@@ -59,7 +60,7 @@ prop_size (t :: T) = length (P.toList t) == P.size t
 prop_prefix1 = sort (P.prefixes (C.pack "roman") t) == map C.pack ["roma", "roman"]
     where
         t = fromStrList [("roman", 1), ("romans", 2), ("roma", 3)]
-prop_prefix2 (t :: T) k = sort (P.prefixes k t) == sort (filter (flip C.isPrefixOf k) (P.keys t))
+prop_prefix2 (t :: T) k = P.prefixes k t == filter (`C.isPrefixOf` k) (P.keys t)
 
 prop_insertWith (t :: T) k v v2 = P.insertWith (+) k v2 (P.insert k v t) P.! k == v + v2
 
@@ -73,6 +74,7 @@ main = do
     check "modelNull"            prop_modelNull
     check "modelMember"          prop_modelMember
     check "modelNotMember"       prop_modelNotMember
+    check "modelKeys"            prop_modelKeys
     check "modelInsert"          prop_modelInsert
     check "modelDelete"          prop_modelDelete
     check "modelFindWithDefault" prop_modelFindWithDefault
