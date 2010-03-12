@@ -13,23 +13,27 @@ import Text.Printf
 
 import QuickCheckUtils
 
+{--------------------------------------------------------------------
+  Model Tests
+--------------------------------------------------------------------}
 prop_modelNull            = P.null            `eq1`     M.null
+prop_modelSize            = P.size            `eq1`     M.size
 prop_modelMember          = P.member          `eq2`     M.member
 prop_modelNotMember       = P.notMember       `eq2`     M.notMember
-prop_modelElems           = P.elems           `eq1`     M.elems
-prop_modelKeys            = P.keys            `eq1`     M.keys
-prop_modelKeysSet         = P.keysSet         `eq1`     M.keysSet
-prop_modelAssocs          = P.assocs          `eq1`     M.assocs
-prop_modelInsert          = P.insert          `listEq3` M.insert
-prop_modelDelete          = P.delete          `listEq2` M.delete
+prop_modelLookup          = P.lookup          `eq2`     M.lookup
 prop_modelFindWithDefault = P.findWithDefault `eq3`     M.findWithDefault
-prop_modelSize            = P.size            `eq1`     M.size
+prop_modelInsert          = P.insert          `listEq3` M.insert
 prop_modelInsertWith      = P.insertWith      `listEq4` M.insertWith $ (+)
 prop_modelInsertWith'     = P.insertWith'     `listEq4` M.insertWith' $ (+)
 prop_modelInsertWithKey   = P.insertWithKey   `listEq4` M.insertWithKey $ (\k v v' -> C.length k + v + v')
 prop_modelInsertWithKey'  = P.insertWithKey'  `listEq4` M.insertWithKey' $ (\k v v' -> C.length k + v + v')
+prop_modelDelete          = P.delete          `listEq2` M.delete
 prop_modelFold            = P.fold            `eq3`     M.fold $ (+)
 prop_modelFoldWithKey     = P.foldWithKey     `eq3`     M.foldWithKey $ (\k v a -> C.length k + v + a)
+prop_modelElems           = P.elems           `eq1`     M.elems
+prop_modelKeys            = P.keys            `eq1`     M.keys
+prop_modelKeysSet         = P.keysSet         `eq1`     M.keysSet
+prop_modelAssocs          = P.assocs          `eq1`     M.assocs
 prop_modelShow            = show              `eq1`     show -- tentative, if Map.show ever changed...
 
 prop_modelFromList (l :: L) = P.toList (P.fromList l) == M.toList (M.fromList l)
@@ -42,14 +46,22 @@ prop_modelFromListWithKey (l :: L) = P.toList (P.fromListWithKey f l) == M.toLis
     where
         f k v v' = C.length k + v + v'
 
+{--------------------------------------------------------------------
+  Idempotent Tests
+--------------------------------------------------------------------}
 prop_idemInsert (t :: T) k v = P.insert k v t == P.insert k v (P.insert k v t)
 prop_idemDelete (t :: T) k   = P.delete k t == P.delete k (P.delete k t)
 
+{--------------------------------------------------------------------
+  Reversible Tests
+--------------------------------------------------------------------}
 prop_revInsert (t :: T) k v = P.notMember k t ==> P.delete k (P.insert k v t) == t
 prop_revToList (t :: T)     = P.fromList (P.toList t) == t
 
-prop_null1          = P.null P.empty
-prop_null2 (t :: T) = P.size t > 0 ==> not $ P.null t
+{--------------------------------------------------------------------
+  Other Tests
+--------------------------------------------------------------------}
+prop_null (t :: T) = if P.size t == 0 then P.null t else not $ P.null t
 
 prop_singleton k (v :: Int) = P.singleton k v == P.insert k v P.empty
 
@@ -80,32 +92,36 @@ prop_insertWith (t :: T) k v v2 = P.insertWith (+) k v2 (P.insert k v t) P.! k =
 
 prop_insertWith' (t :: T) k v v2 = P.insertWith' (+) k v2 (P.insert k v t) P.! k == v + v2
 
+{--------------------------------------------------------------------
+  Main
+--------------------------------------------------------------------}
 main = do
     let check s a = printf "%-25s: " s >> quickCheck a
     let group s = putStrLn "" >> putStrLn s >> putStrLn (replicate (length s) '=')
 
     group "Model Tests"
     check "modelNull"            prop_modelNull
+    check "modelSize"            prop_modelSize
     check "modelMember"          prop_modelMember
     check "modelNotMember"       prop_modelNotMember
-    check "modelElems"           prop_modelElems
-    check "modelKeys"            prop_modelKeys
-    check "modelKeysSet"         prop_modelKeysSet
-    check "modelAssocs"          prop_modelAssocs
-    check "modelInsert"          prop_modelInsert
-    check "modelDelete"          prop_modelDelete
+    check "modelLookup"          prop_modelLookup
     check "modelFindWithDefault" prop_modelFindWithDefault
-    check "modelSize"            prop_modelSize
+    check "modelInsert"          prop_modelInsert
     check "modelInsertWith"      prop_modelInsertWith
     check "modelInsertWith'"     prop_modelInsertWith'
     check "modelInsertWithKey"   prop_modelInsertWithKey
     check "modelInsertWithKey'"  prop_modelInsertWithKey'
+    check "modelDelete"          prop_modelDelete
     check "modelFold"            prop_modelFold 
     check "modelFoldWithKey"     prop_modelFoldWithKey
+    check "modelElems"           prop_modelElems
+    check "modelKeys"            prop_modelKeys
+    check "modelKeysSet"         prop_modelKeysSet
+    check "modelAssocs"          prop_modelAssocs
+    check "modelShow"            prop_modelShow
     check "modelFromList"        prop_modelFromList
     check "modelFromListWith"    prop_modelFromListWith
     check "modelFromListWithKey" prop_modelFromListWithKey
-    check "modelShow"            prop_modelShow
 
     group "Idempotent Tests"
     check "idemInsert"           prop_idemInsert
@@ -116,8 +132,7 @@ main = do
     check "revToList"            prop_revToList
 
     group "Other Tests"
-    check "null1"                prop_null1
-    check "null2"                prop_null2
+    check "null"                 prop_null
     check "singleton"            prop_singleton
     check "member1"              prop_member1
     check "member2"              prop_member2
