@@ -32,6 +32,16 @@ prop_modelFold            = P.fold            `eq3`     M.fold $ (+)
 prop_modelFoldWithKey     = P.foldWithKey     `eq3`     M.foldWithKey $ (\k v a -> C.length k + v + a)
 prop_modelShow            = show              `eq1`     show -- tentative, if Map.show ever changed...
 
+prop_modelFromList (l :: L) = P.toList (P.fromList l) == M.toList (M.fromList l)
+
+prop_modelFromListWith (l :: L) = P.toList (P.fromListWith f l) == M.toList (M.fromListWith f l)
+    where
+        f v v' = v + v'
+
+prop_modelFromListWithKey (l :: L) = P.toList (P.fromListWithKey f l) == M.toList (M.fromListWithKey f l)
+    where
+        f k v v' = C.length k + v + v'
+
 prop_idemInsert (t :: T) k v = P.insert k v t == P.insert k v (P.insert k v t)
 prop_idemDelete (t :: T) k   = P.delete k t == P.delete k (P.delete k t)
 
@@ -92,6 +102,9 @@ main = do
     check "modelInsertWithKey'"  prop_modelInsertWithKey'
     check "modelFold"            prop_modelFold 
     check "modelFoldWithKey"     prop_modelFoldWithKey
+    check "modelFromList"        prop_modelFromList
+    check "modelFromListWith"    prop_modelFromListWith
+    check "modelFromListWithKey" prop_modelFromListWithKey
     check "modelShow"            prop_modelShow
 
     group "Idempotent Tests"

@@ -68,6 +68,8 @@ module Data.PTree (
         -- * Lists
         , toList
         , fromList
+        , fromListWith
+        , fromListWithKey
     ) where
 
 import qualified Data.ByteString as S
@@ -296,11 +298,23 @@ prefixes k t = reverse $ go k t []
 toList :: PTree a -> [(Key, a)]
 toList = foldWithKey (\k v -> ((k,v):)) []
 
--- | /O(n)/ Create a tree from a list of key/value pairs.
+-- | /O(n * min(n, S))/ Create a tree from a list of key/value pairs.
 fromList :: [(Key, a)] -> PTree a
 fromList = foldl' ins empty
     where
         ins t (k, v) = insert k v t
+
+-- | /O(n * min(n, S))/ Create a tree from a list of key/value pairs
+--   with the given combining function.
+fromListWith :: (a -> a -> a) -> [(Key, a)] -> PTree a
+fromListWith f = fromListWithKey (\_ v v' -> f v v')
+
+-- | /O(n * min(n, S))/ Create a tree from a list of key/value pairs
+--   with the given combining function.
+fromListWithKey :: (Key -> a -> a -> a) -> [(Key, a)] -> PTree a
+fromListWithKey f = foldl' ins empty
+    where
+        ins t (k, v) = insertWithKey f k v t
 
 {--------------------------------------------------------------------
   Helpers
