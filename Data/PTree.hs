@@ -61,6 +61,7 @@ module Data.PTree (
         -- * Conversions
         , elems
         , keys
+        , keysSet
         , assocs
         , prefixes
 
@@ -75,6 +76,7 @@ import Data.Function (on)
 import qualified Data.IntMap as IM
 import Data.List (foldl')
 import Data.Maybe (fromMaybe)
+import qualified Data.Set as Set
 import Data.Word
 import Prelude hiding (foldr, lookup, null)
 
@@ -257,6 +259,10 @@ elems = fold (:) []
 -- | /O(n)/ Return all keys in the tree in ascending order.
 keys :: PTree a -> [Key]
 keys = foldWithKey (\k _ a -> k:a) []
+
+-- | /O(n)/ Return the set of all keys in the tree.
+keysSet :: PTree a -> Set.Set Key
+keysSet = Set.fromDistinctAscList . keys
 
 -- | /O(n) Return all key/value pairs in the tree in ascending order.
 assocs :: PTree a -> [(Key, a)]

@@ -18,6 +18,7 @@ prop_modelMember          = P.member          `eq2`     M.member
 prop_modelNotMember       = P.notMember       `eq2`     M.notMember
 prop_modelElems           = P.elems           `eq1`     M.elems
 prop_modelKeys            = P.keys            `eq1`     M.keys
+prop_modelKeysSet         = P.keysSet         `eq1`     M.keysSet
 prop_modelAssocs          = P.assocs          `eq1`     M.assocs
 prop_modelInsert          = P.insert          `listEq3` M.insert
 prop_modelDelete          = P.delete          `listEq2` M.delete
@@ -78,6 +79,7 @@ main = do
     check "modelNotMember"       prop_modelNotMember
     check "modelElems"           prop_modelElems
     check "modelKeys"            prop_modelKeys
+    check "modelKeysSet"         prop_modelKeysSet
     check "modelAssocs"          prop_modelAssocs
     check "modelInsert"          prop_modelInsert
     check "modelDelete"          prop_modelDelete
