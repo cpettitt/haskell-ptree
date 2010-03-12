@@ -59,6 +59,7 @@ module Data.PTree (
         , foldWithKey
 
         -- * Conversions
+        , elems
         , keys
         , prefixes
 
@@ -247,10 +248,14 @@ foldWithKey f z (Node k v c) = case v of
   Conversions
 --------------------------------------------------------------------}
 
--- | /O(n)/ Return all elements in the PTree in ascending order.
+-- | /O(n)/ Return all values of the tree in ascending order of their
+--   keys.
+elems :: PTree a -> [a]
+elems = fold (:) []
+
+-- | /O(n)/ Return all keys in the tree in ascending order.
 keys :: PTree a -> [Key]
-keys = foldWithKey step []
-    where step k _ = (k:)
+keys = foldWithKey (\k _ a -> k:a) []
 
 -- | /O(min(n, S))/ Returns all keys in this PTree that are a prefix
 --   of the given Key. The keys are returned in ascending order.

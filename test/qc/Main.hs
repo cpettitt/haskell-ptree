@@ -16,6 +16,7 @@ import QuickCheckUtils
 prop_modelNull            = P.null            `eq1`     M.null
 prop_modelMember          = P.member          `eq2`     M.member
 prop_modelNotMember       = P.notMember       `eq2`     M.notMember
+prop_modelElems           = P.elems           `eq1`     M.elems
 prop_modelKeys            = P.keys            `eq1`     M.keys
 prop_modelInsert          = P.insert          `listEq3` M.insert
 prop_modelDelete          = P.delete          `listEq2` M.delete
@@ -74,6 +75,7 @@ main = do
     check "modelNull"            prop_modelNull
     check "modelMember"          prop_modelMember
     check "modelNotMember"       prop_modelNotMember
+    check "modelElems"           prop_modelElems
     check "modelKeys"            prop_modelKeys
     check "modelInsert"          prop_modelInsert
     check "modelDelete"          prop_modelDelete
