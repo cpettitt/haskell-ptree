@@ -30,6 +30,7 @@ prop_modelInsertWithKey   = P.insertWithKey   `listEq4` M.insertWithKey $ (\k v 
 prop_modelInsertWithKey'  = P.insertWithKey'  `listEq4` M.insertWithKey' $ (\k v v' -> C.length k + v + v')
 prop_modelFold            = P.fold            `eq3`     M.fold $ (+)
 prop_modelFoldWithKey     = P.foldWithKey     `eq3`     M.foldWithKey $ (\k v a -> C.length k + v + a)
+prop_modelShow            = show              `eq1`     show -- tentative, if Map.show ever changed...
 
 prop_idemInsert (t :: T) k v = P.insert k v t == P.insert k v (P.insert k v t)
 prop_idemDelete (t :: T) k   = P.delete k t == P.delete k (P.delete k t)
@@ -91,6 +92,7 @@ main = do
     check "modelInsertWithKey'"  prop_modelInsertWithKey'
     check "modelFold"            prop_modelFold 
     check "modelFoldWithKey"     prop_modelFoldWithKey
+    check "modelShow"            prop_modelShow
 
     group "Idempotent Tests"
     check "idemInsert"           prop_idemInsert
