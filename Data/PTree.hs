@@ -118,7 +118,7 @@ singleton k v = node k (Just v)
 --------------------------------------------------------------------}
 
 -- | /O(min(n, S))/ Find the value for the given key. Calls 'error'
---   when the key is not in the PTree
+--   when the key is not in the tree
 (!) :: PTree a -> Key -> a
 t ! k = fromMaybe
             (error $ "PTree.!: key " ++ show k ++ " is not an element of this PTree")
@@ -128,28 +128,28 @@ t ! k = fromMaybe
   Queries
 --------------------------------------------------------------------}
 
--- | /O(1)/ Tests whether the PTree is empty.
+-- | /O(1)/ Tests whether the tree is empty.
 null :: PTree a -> Bool
 null Tip = True
 null _   = False
 
--- | /O(n)/ Returns the number of elements in the PTree.
+-- | /O(n)/ Returns the number of elements in the tree.
 size :: PTree a -> Int
 size = foldWithKey (\_ _ a -> a + 1) 0
 
 -- | /O(min(n, S))/ Determines if the supplied key is an element in
---   the supplied PTree.
+--   the supplied tree.
 member :: Key -> PTree a -> Bool
 member k t = case lookup k t of
     Just _  -> True
     Nothing -> False
 
 -- | /O(min(n, S))/ Determines if the supplied key is NOT an element
---   in the supplied PTree.
+--   in the supplied tree.
 notMember :: Key -> PTree a -> Bool
 notMember k = not . member k
 
--- | /O(min(n, S))/ Searches for the given key in the PTree.
+-- | /O(min(n, S))/ Searches for the given key in the tree.
 lookup :: Key -> PTree a -> Maybe a
 lookup _ Tip = Nothing
 lookup k (Node nk nv nc)
@@ -161,7 +161,7 @@ lookup k (Node nk nv nc)
         lnk = S.length nk
 
 -- | /O(min(n, S))/ Searches for the value for the given key. If the
---   key is not in the PTree then the default value is returned.
+--   key is not in the tree then the default value is returned.
 findWithDefault :: a -> Key -> PTree a -> a
 findWithDefault def k t = fromMaybe def (lookup k t)
 
@@ -169,7 +169,7 @@ findWithDefault def k t = fromMaybe def (lookup k t)
   Insertion
 --------------------------------------------------------------------}
 
--- | /O(min(n, S))/ Inserts the given key/value pair into the PTree.
+-- | /O(min(n, S))/ Inserts the given key/value pair into the tree.
 insert :: Key -> a -> PTree a -> PTree a
 insert k v Tip = node k (Just v)
 insert k v n@(Node nk _ nc)
@@ -217,7 +217,7 @@ insertWithKey' f k v n@(Node nk nv nc)
   Deletion
 --------------------------------------------------------------------}
 
--- | /O(min(n, S))/ Removes the given key from the PTree
+-- | /O(min(n, S))/ Removes the given key from the tree.
 delete :: Key -> PTree a -> PTree a
 delete _ Tip = Tip
 delete k n@(Node nk _ nc)
@@ -233,11 +233,11 @@ delete k n@(Node nk _ nc)
   Folds
 --------------------------------------------------------------------}
 
--- | /O(n)/ Folds the values in the PTree.
+-- | /O(n)/ Folds the values in the tree.
 fold :: (a -> b -> b) -> b -> PTree a -> b
 fold f = foldWithKey (\_ -> f)
 
--- | /O(n)/ Folds the keys and values in the PTree.
+-- | /O(n)/ Folds the keys and values in the tree.
 foldWithKey :: (Key -> a -> b -> b) -> b -> PTree a -> b
 foldWithKey _ z Tip = z
 foldWithKey f z (Node k v c) = case v of
@@ -268,7 +268,7 @@ keysSet = Set.fromDistinctAscList . keys
 assocs :: PTree a -> [(Key, a)]
 assocs = toList
 
--- | /O(min(n, S))/ Returns all keys in this PTree that are a prefix
+-- | /O(min(n, S))/ Returns all keys in this tree that are a prefix
 --   of the given Key. The keys are returned in ascending order.
 --
 -- > prefixes "roman" (fromList [("roman", 1), ("romans", 2), ("roma", 3)]) == ["roma", "roman"]
@@ -291,12 +291,12 @@ prefixes k t = reverse $ go k t []
   Lists
 --------------------------------------------------------------------}
 
--- | /O(n)/ Converts the PTree to a list of key/value pairs in
+-- | /O(n)/ Converts the tree to a list of key/value pairs in
 --  ascending order.
 toList :: PTree a -> [(Key, a)]
 toList = foldWithKey (\k v -> ((k,v):)) []
 
--- | /O(n)/ Create a PTree from a list of key/value pairs.
+-- | /O(n)/ Create a tree from a list of key/value pairs.
 fromList :: [(Key, a)] -> PTree a
 fromList = foldl' ins empty
     where
