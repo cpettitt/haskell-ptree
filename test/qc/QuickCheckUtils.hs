@@ -6,9 +6,7 @@ import Control.Arrow (first)
 import Control.Monad (liftM)
 
 import qualified Data.ByteString.Char8 as C
-import Data.List (sortBy)
 import qualified Data.Map as M
-import Data.Ord (comparing)
 import qualified Data.PTree as P
 
 import Test.QuickCheck
@@ -76,8 +74,8 @@ listEq2 :: (b -> T -> T)
         -> b
         -> [(P.Key, Int)]
         -> Bool
-listEq2 f g = eq2 (\x' l' -> sortList . P.toList $ f x' l')
-                  (\x' l' -> sortList . M.toList $ g x' l')
+listEq2 f g = eq2 (\x' l' -> P.toList $ f x' l')
+                  (\x' l' -> M.toList $ g x' l')
 
 listEq3 :: (b -> c -> T -> T)
         -> (b -> c -> M -> M)
@@ -85,8 +83,8 @@ listEq3 :: (b -> c -> T -> T)
         -> c
         -> [(P.Key, Int)]
         -> Bool
-listEq3 f g = eq3 (\x' y' l' -> sortList . P.toList $ f x' y' l')
-                  (\x' y' l' -> sortList . M.toList $ g x' y' l')
+listEq3 f g = eq3 (\x' y' l' -> P.toList $ f x' y' l')
+                  (\x' y' l' -> M.toList $ g x' y' l')
 
 listEq4 :: (b -> c -> d -> T -> T)
         -> (b -> c -> d -> M -> M)
@@ -95,10 +93,7 @@ listEq4 :: (b -> c -> d -> T -> T)
         -> d
         -> [(P.Key, Int)]
         -> Bool
-listEq4 f g = eq4 (\x' y' z' l' -> sortList . P.toList $ f x' y' z' l')
-                  (\x' y' z' l' -> sortList . M.toList $ g x' y' z' l')
+listEq4 f g = eq4 (\x' y' z' l' -> P.toList $ f x' y' z' l')
+                  (\x' y' z' l' -> M.toList $ g x' y' z' l')
 
-sortList = sortBy (comparing fst)
-
-fromStrList :: [(String, Int)] -> T
 fromStrList = P.fromList . map (first C.pack)
