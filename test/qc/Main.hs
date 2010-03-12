@@ -23,13 +23,15 @@ prop_modelNotMember       = P.notMember       `eq2`     M.notMember
 prop_modelLookup          = P.lookup          `eq2`     M.lookup
 prop_modelFindWithDefault = P.findWithDefault `eq3`     M.findWithDefault
 prop_modelInsert          = P.insert          `listEq3` M.insert
-prop_modelInsertWith      = P.insertWith      `listEq4` M.insertWith $ (+)
-prop_modelInsertWith'     = P.insertWith'     `listEq4` M.insertWith' $ (+)
-prop_modelInsertWithKey   = P.insertWithKey   `listEq4` M.insertWithKey $ (\k v v' -> C.length k + v + v')
+prop_modelInsertWith      = P.insertWith      `listEq4` M.insertWith     $ (+)
+prop_modelInsertWith'     = P.insertWith'     `listEq4` M.insertWith'    $ (+)
+prop_modelInsertWithKey   = P.insertWithKey   `listEq4` M.insertWithKey  $ (\k v v' -> C.length k + v + v')
 prop_modelInsertWithKey'  = P.insertWithKey'  `listEq4` M.insertWithKey' $ (\k v v' -> C.length k + v + v')
 prop_modelDelete          = P.delete          `listEq2` M.delete
-prop_modelFold            = P.fold            `eq3`     M.fold $ (+)
-prop_modelFoldWithKey     = P.foldWithKey     `eq3`     M.foldWithKey $ (\k v a -> C.length k + v + a)
+prop_modelMap             = P.map             `listEq2` M.map            $ (+1)
+prop_modelMapWithKey      = P.mapWithKey      `listEq2` M.mapWithKey     $ (\k v -> C.length k + v)
+prop_modelFold            = P.fold            `eq3`     M.fold           $ (+)
+prop_modelFoldWithKey     = P.foldWithKey     `eq3`     M.foldWithKey    $ (\k v a -> C.length k + v + a)
 prop_modelElems           = P.elems           `eq1`     M.elems
 prop_modelKeys            = P.keys            `eq1`     M.keys
 prop_modelKeysSet         = P.keysSet         `eq1`     M.keysSet
@@ -112,6 +114,8 @@ main = do
     check "modelInsertWithKey"   prop_modelInsertWithKey
     check "modelInsertWithKey'"  prop_modelInsertWithKey'
     check "modelDelete"          prop_modelDelete
+    check "modelMap"             prop_modelMap
+    check "modelMapWithKey"      prop_modelMapWithKey
     check "modelFold"            prop_modelFold 
     check "modelFoldWithKey"     prop_modelFoldWithKey
     check "modelElems"           prop_modelElems

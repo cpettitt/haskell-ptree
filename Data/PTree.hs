@@ -54,7 +54,12 @@ module Data.PTree (
         -- * Deletion
         , delete
 
-        -- * Folds
+        -- * Traversal
+        -- ** Map
+        , map
+        , mapWithKey
+
+        -- ** Fold
         , fold
         , foldWithKey
 
@@ -80,7 +85,7 @@ import Data.List (foldl')
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Data.Word
-import Prelude hiding (foldr, lookup, null)
+import Prelude hiding (foldr, lookup, map, null)
 
 
 {--------------------------------------------------------------------
@@ -230,9 +235,26 @@ delete k n@(Node nk _ nc)
                             else Node nk Nothing nc
         | nk `S.isPrefixOf` k = updateChild (delete k) n k
         | otherwise = n
+{--------------------------------------------------------------------
+  Map
+--------------------------------------------------------------------}
+
+-- | /O(n)/ Map a function over all values in the tree.
+map :: (a -> b) -> PTree a -> PTree b
+map f = mapWithKey (\_ v -> f v)
+
+-- | /O(n)/ Map a function over all keys and values in the tree.
+mapWithKey :: (Key -> a -> b) -> PTree a -> PTree b
+mapWithKey _ Tip = Tip
+mapWithKey f (Node k v c) = Node k v' c'
+    where
+        v' = case v of
+            Nothing -> Nothing
+            Just x  -> Just (f k x)
+        c' = IM.map (mapWithKey f) c
 
 {--------------------------------------------------------------------
-  Folds
+  Fold
 --------------------------------------------------------------------}
 
 -- | /O(n)/ Folds the values in the tree.
