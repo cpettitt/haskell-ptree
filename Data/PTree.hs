@@ -78,7 +78,9 @@ module Data.PTree (
     ) where
 
 import qualified Data.ByteString as S
+import qualified Data.ByteString.Char8 as C
 import qualified Data.ByteString.Unsafe as SU
+import Data.Char (chr)
 import Data.Function (on)
 import qualified Data.IntMap as IM
 import Data.List (foldl')
@@ -386,3 +388,25 @@ getChildKey k = fromIntegral . SU.unsafeIndex k
 {-# INLINE getChild #-}
 getChild :: ChildKey -> Children a -> PTree a
 getChild = IM.findWithDefault Nil
+
+{--------------------------------------------------------------------
+  Debugging
+--------------------------------------------------------------------}
+
+showTree :: (Show a) => PTree a -> String
+showTree t = (showsTree [bar] t) ""
+
+showsTree :: (Show a) => [String] -> PTree a -> ShowS
+showsTree bars Nil = showString "Nil\n"
+showsTree bars (Node nk nv nc) = showNode nk nv . IM.foldWithKey showChild (showString "") nc
+    where
+        showNode k Nothing  = showString " *\n"
+        showNode k (Just v) = showString " * " . showString (C.unpack k) . showString " := " . showString (show v) . showString "\n"
+        showChild k n r = showBars bars . showString "[" . showString (chr k:"") . showString "] -- " . showsTree (" |     ":bars) n . r
+
+showBars :: [String] -> ShowS
+showBars []   = id
+showBars bars = showString (concat (reverse (tail bars)))
+
+bar :: String
+bar = " |     "
