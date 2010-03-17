@@ -96,4 +96,10 @@ listEq4 :: (b -> c -> d -> T -> T)
 listEq4 f g = eq4 (\x' y' z' l' -> P.toList $ f x' y' z' l')
                   (\x' y' z' l' -> M.toList $ g x' y' z' l')
 
+sumKV :: P.Key -> Int -> Int
+sumKV k v = C.length k + v
+
+sumKVV :: P.Key -> Int -> Int -> Int
+sumKVV k v v2 = sumKV k v + v2
+
 fromStrList = P.fromList . map (first C.pack)

@@ -54,6 +54,12 @@ module Data.PTree (
         -- * Deletion
         , delete
 
+        -- * Update
+        , adjust
+        , adjustWithKey
+        , update
+        , updateWithKey
+
         -- * Traversal
         -- ** Map
         , map
@@ -237,6 +243,31 @@ delete k n@(Node nk _ nc)
                             else Node nk Nothing nc
         | nk `S.isPrefixOf` k = updateChild (delete k) n k
         | otherwise = n
+
+{--------------------------------------------------------------------
+  Update
+--------------------------------------------------------------------}
+
+adjust :: (a -> a) -> Key -> PTree a -> PTree a
+adjust f = adjustWithKey (\_ v -> f v)
+
+adjustWithKey :: (Key -> a -> a) -> Key -> PTree a -> PTree a
+adjustWithKey f = updateWithKey (\k v -> Just (f k v))
+
+update :: (a -> Maybe a) -> Key -> PTree a -> PTree a
+update f = updateWithKey (\_ v -> f v)
+
+updateWithKey :: (Key -> a -> Maybe a) -> Key -> PTree a -> PTree a
+updateWithKey f k Nil = Nil
+updateWithKey f k n@(Node nk nv nc)
+    | k == nk = case nv of
+            Nothing -> n
+            Just nv' -> case f k nv' of
+                Nothing -> delete k n
+                Just v' -> Node nk (Just v') nc
+    | nk `S.isPrefixOf` k = updateChild (updateWithKey f k) n k
+    | otherwise = n
+
 {--------------------------------------------------------------------
   Map
 --------------------------------------------------------------------}
