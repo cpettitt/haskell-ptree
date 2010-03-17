@@ -93,7 +93,7 @@ import Prelude hiding (foldr, lookup, map, null)
 --------------------------------------------------------------------}
 
 -- | A map of ByteStrings to values.
-data PTree a = Tip
+data PTree a = Nil
              | Node {-# UNPACK #-} !Key (Maybe a) !(Children a)
 
 -- | The key type for PTrees.
@@ -114,7 +114,7 @@ instance (Eq a) => Eq (PTree a) where
 
 -- | /O(1)/ Constructs an empty tree.
 empty :: PTree a
-empty = Tip
+empty = Nil
 
 -- | /O(1)/ Constructs a tree with a single element.
 singleton :: Key -> a -> PTree a
@@ -137,7 +137,7 @@ t ! k = fromMaybe
 
 -- | /O(1)/ Tests whether the tree is empty.
 null :: PTree a -> Bool
-null Tip = True
+null Nil = True
 null _   = False
 
 -- | /O(n)/ Returns the number of elements in the tree.
@@ -158,7 +158,7 @@ notMember k = not . member k
 
 -- | /O(min(n, S))/ Searches for the given key in the tree.
 lookup :: Key -> PTree a -> Maybe a
-lookup _ Tip = Nothing
+lookup _ Nil = Nothing
 lookup k (Node nk nv nc)
         | k == nk = nv
         | lk <= lnk = Nothing
@@ -178,7 +178,7 @@ findWithDefault def k t = fromMaybe def (lookup k t)
 
 -- | /O(min(n, S))/ Inserts the given key/value pair into the tree.
 insert :: Key -> a -> PTree a -> PTree a
-insert k v Tip = node k (Just v)
+insert k v Nil = node k (Just v)
 insert k v n@(Node nk _ nc)
         | k == nk = Node nk (Just v) nc
         | nk `S.isPrefixOf` k = updateChild (insert k v) n k
@@ -202,7 +202,7 @@ insertWith' f = insertWithKey' (\_ -> f)
 --   @key@. If it does contain @key@, the function will insert the
 --   value @f key value old_value@.
 insertWithKey :: (Key -> a -> a -> a) -> Key -> a -> PTree a -> PTree a
-insertWithKey _ k v Tip = node k (Just v)
+insertWithKey _ k v Nil = node k (Just v)
 insertWithKey f k v n@(Node nk nv nc)
         | k == nk = case nv of
             Nothing -> Node nk (Just v) nc
@@ -212,7 +212,7 @@ insertWithKey f k v n@(Node nk nv nc)
 
 -- | /O(min(n, S))/ Strict version of 'insertWithKey'
 insertWithKey' :: (Key -> a -> a -> a) -> Key -> a -> PTree a -> PTree a
-insertWithKey' _ k v Tip = node k (Just v)
+insertWithKey' _ k v Nil = node k (Just v)
 insertWithKey' f k v n@(Node nk nv nc)
         | k == nk = case nv of
             Nothing -> Node nk (Just v) nc
@@ -226,10 +226,10 @@ insertWithKey' f k v n@(Node nk nv nc)
 
 -- | /O(min(n, S))/ Removes the given key from the tree.
 delete :: Key -> PTree a -> PTree a
-delete _ Tip = Tip
+delete _ Nil = Nil
 delete k n@(Node nk _ nc)
         | k == nk = if IM.null nc
-                        then Tip
+                        then Nil
                         else if IM.size nc == 1
                             then snd $ head $ IM.toList nc
                             else Node nk Nothing nc
@@ -245,7 +245,7 @@ map f = mapWithKey (\_ v -> f v)
 
 -- | /O(n)/ Map a function over all keys and values in the tree.
 mapWithKey :: (Key -> a -> b) -> PTree a -> PTree b
-mapWithKey _ Tip = Tip
+mapWithKey _ Nil = Nil
 mapWithKey f (Node k v c) = Node k v' c'
     where
         v' = case v of
@@ -263,7 +263,7 @@ fold f = foldWithKey (\_ -> f)
 
 -- | /O(n)/ Folds the keys and values in the tree.
 foldWithKey :: (Key -> a -> b -> b) -> b -> PTree a -> b
-foldWithKey _ z Tip = z
+foldWithKey _ z Nil = z
 foldWithKey f z (Node k v c) = case v of
             Nothing -> children
             Just x  -> f k x children
@@ -300,7 +300,7 @@ prefixes :: Key -> PTree a -> [Key]
 prefixes k t = reverse $ go k t []
     where
         go :: Key -> PTree a -> [Key] -> [Key]
-        go _ Tip a = a
+        go _ Nil a = a
         go k' (Node nk nv nc) a
             | S.length k < lnk = a
             | nk `S.isPrefixOf` k' = case nv of
@@ -354,7 +354,7 @@ join x@(Node xk _ _) y@(Node yk _ _)
         ck = commonPrefix xk yk
         insertChild :: PTree a -> Key -> PTree a -> PTree a
         insertChild child key parent = updateChild (const child) parent key
-join _ _ = error "PTree.join: can't join Tip"
+join _ _ = error "PTree.join: can't join Nil"
 
 {-# INLINE updateChild #-}
 updateChild :: (PTree a -> PTree a) -> PTree a -> Key -> PTree a
@@ -363,9 +363,9 @@ updateChild f (Node pk pv pc) k = Node pk pv newChildren
         childKey = getChildKey k (S.length pk)
         child = getChild childKey pc
         newChildren = case f child of
-            Tip -> IM.delete childKey pc
+            Nil -> IM.delete childKey pc
             n   -> IM.insert childKey n pc
-updateChild _ Tip _ = error "PTree.updateChild: can't update child of Tip"
+updateChild _ Nil _ = error "PTree.updateChild: can't update child of Nil"
 
 commonPrefix :: Key -> Key -> Key
 commonPrefix x y = S.unfoldr f (x, y)
@@ -385,4 +385,4 @@ getChildKey k = fromIntegral . SU.unsafeIndex k
 
 {-# INLINE getChild #-}
 getChild :: ChildKey -> Children a -> PTree a
-getChild = IM.findWithDefault Tip
+getChild = IM.findWithDefault Nil
