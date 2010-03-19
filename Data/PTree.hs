@@ -254,7 +254,7 @@ update :: (a -> Maybe a) -> Key -> PTree a -> PTree a
 update f = updateWithKey (\_ v -> f v)
 
 updateWithKey :: (Key -> a -> Maybe a) -> Key -> PTree a -> PTree a
-updateWithKey f k Nil = Nil
+updateWithKey _ _ Nil = Nil
 updateWithKey f k n@(Node nk nv nc)
     | k == nk = case nv of
             Nothing -> n
@@ -422,7 +422,7 @@ getChild = IM.findWithDefault Nil
 -- child to this node's position.
 collapse :: PTree a -> PTree a
 collapse Nil = Nil
-collapse n@(Node k _ c)
+collapse (Node k _ c)
     | IM.null c = Nil
     | IM.size c == 1 = snd $ head $ IM.toList c
     | otherwise = Node k Nothing c
@@ -432,13 +432,13 @@ collapse n@(Node k _ c)
 --------------------------------------------------------------------}
 
 showTree :: (Show a) => PTree a -> String
-showTree t = (showsTree [bar] t) ""
+showTree t = showsTree [bar] t ""
 
 showsTree :: (Show a) => [String] -> PTree a -> ShowS
 showsTree bars Nil = showString "Nil\n"
 showsTree bars (Node nk nv nc) = showNode nk nv . IM.foldWithKey showChild (showString "") nc
     where
-        showNode k Nothing  = showString " *\n"
+        showNode _ Nothing  = showString " *\n"
         showNode k (Just v) = showString " * " . showString (C.unpack k) . showString " := " . showString (show v) . showString "\n"
         showChild k n r = showBars bars . showString "[" . showString (chr k:"") . showString "] -- " . showsTree (" |     ":bars) n . r
 
