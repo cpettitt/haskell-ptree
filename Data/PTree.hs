@@ -235,12 +235,8 @@ insertWithKey' f k v n@(Node nk nv nc)
 -- | /O(min(n, S))/ Removes the given key from the tree.
 delete :: Key -> PTree a -> PTree a
 delete _ Nil = Nil
-delete k n@(Node nk _ nc)
-        | k == nk = if IM.null nc
-                        then Nil
-                        else if IM.size nc == 1
-                            then snd $ head $ IM.toList nc
-                            else Node nk Nothing nc
+delete k n@(Node nk _ _)
+        | k == nk = collapse n
         | nk `S.isPrefixOf` k = updateChild (delete k) n k
         | otherwise = n
 
@@ -263,7 +259,7 @@ updateWithKey f k n@(Node nk nv nc)
     | k == nk = case nv of
             Nothing -> n
             Just nv' -> case f k nv' of
-                Nothing -> delete k n
+                Nothing -> collapse n
                 Just v' -> Node nk (Just v') nc
     | nk `S.isPrefixOf` k = updateChild (updateWithKey f k) n k
     | otherwise = n
@@ -419,6 +415,17 @@ getChildKey k = fromIntegral . SU.unsafeIndex k
 {-# INLINE getChild #-}
 getChild :: ChildKey -> Children a -> PTree a
 getChild = IM.findWithDefault Nil
+
+-- Set the value of this node to Nothing and attempts to collapse it.
+-- If a node has 0 children then it can be collapsed to 'Nil'. If a
+-- node has 1 child, then we can remove this node and promote the
+-- child to this node's position.
+collapse :: PTree a -> PTree a
+collapse Nil = Nil
+collapse n@(Node k _ c)
+    | IM.null c = Nil
+    | IM.size c == 1 = snd $ head $ IM.toList c
+    | otherwise = Node k Nothing c
 
 {--------------------------------------------------------------------
   Debugging
