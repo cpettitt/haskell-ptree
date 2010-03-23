@@ -110,12 +110,6 @@ type Key = S.ByteString
 type ChildKey = IM.Key
 type Children a = IM.IntMap (PTree a)
 
-instance (Show a) => Show (PTree a) where
-    show = showString "fromList " . show . toList
-
-instance (Eq a) => Eq (PTree a) where
-    (==) = (==) `on` toList
-
 {--------------------------------------------------------------------
   Constructors
 --------------------------------------------------------------------}
@@ -131,6 +125,12 @@ singleton k v = node k (Just v)
 {--------------------------------------------------------------------
   Instances
 --------------------------------------------------------------------}
+instance (Show a) => Show (PTree a) where
+    show = showString "fromList " . show . toList
+
+instance (Eq a) => Eq (PTree a) where
+    (==) = (==) `on` toList
+
 instance Functor PTree where
     fmap = map
 
