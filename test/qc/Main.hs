@@ -16,6 +16,7 @@ import QuickCheckUtils
 {--------------------------------------------------------------------
   Model Tests
 --------------------------------------------------------------------}
+prop_modelFmap            = fmap              `listEq2` fmap             $ (+1)
 prop_modelNull            = P.null            `eq1`     M.null
 prop_modelSize            = P.size            `eq1`     M.size
 prop_modelMember          = P.member          `eq2`     M.member
@@ -127,6 +128,7 @@ main = do
     let group s = putStrLn "" >> putStrLn s >> putStrLn (replicate (length s) '=')
 
     group "Model Tests"
+    check "modelFmap"            prop_modelFmap
     check "modelNull"            prop_modelNull
     check "modelSize"            prop_modelSize
     check "modelMember"          prop_modelMember
