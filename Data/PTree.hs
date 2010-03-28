@@ -64,6 +64,8 @@ module Data.PTree (
 
         -- ** Union
         , union
+        , unionWith
+        , unionWithKey
 
         -- * Traversal
 
@@ -291,7 +293,6 @@ union t1@(Node k1 v1 c1) t2@(Node k2 v2 c2)
         | k1 == k2      = Node k1 valueUnion childUnion
         | otherwise     = join t1 t2 
     where
-        shorter x y = S.length x < S.length y
         union1 | k1 `S.isPrefixOf` k2 = updateChild (union t2) t1 k2
                | otherwise = join t1 t2
         union2 | k2 `S.isPrefixOf` k1 = updateChild (union t1) t2 k1
@@ -301,6 +302,33 @@ union t1@(Node k1 v1 c1) t2@(Node k2 v2 c2)
 union Nil Nil = Nil
 union t Nil   = t
 union Nil t   = t
+
+-- | /O(n+m)/ Like 'union' but with a combining function for resolving values
+--   of duplicate keys.
+unionWith :: (a -> a -> a) -> PTree a -> PTree a -> PTree a
+unionWith f t1 t2 = unionWithKey (\_ x y -> f x y) t1 t2
+
+-- | /O(n+m)/ Like 'unionWith' but the combining function also takes a 'Key'.
+unionWithKey :: (Key -> a -> a -> a) -> PTree a -> PTree a -> PTree a
+unionWithKey f t1@(Node k1 v1 c1) t2@(Node k2 v2 c2)
+        | shorter k1 k2 = union1
+        | shorter k2 k1 = union2
+        | k1 == k2      = Node k1 valueUnion childUnion
+        | otherwise     = join t1 t2 
+    where
+        union1 | k1 `S.isPrefixOf` k2 = updateChild (unionWithKey f t2) t1 k2
+               | otherwise = join t1 t2
+        union2 | k2 `S.isPrefixOf` k1 = updateChild (unionWithKey f t1) t2 k1
+               | otherwise = join t1 t2
+        valueUnion = case v1 of
+                        Just x1 -> case v2 of
+                            Just x2 -> Just $ f k1 x1 x2
+                            Nothing -> v1
+                        Nothing -> v2
+        childUnion = IM.unionWith (unionWithKey f) c1 c2
+unionWithKey _ Nil Nil = Nil
+unionWithKey _ t Nil   = t
+unionWithKey _ Nil t   = t
 
 {--------------------------------------------------------------------
   Map
@@ -470,6 +498,10 @@ collapse (Node k _ c)
     | IM.null c = Nil
     | IM.size c == 1 = snd $ head $ IM.toList c
     | otherwise = Node k Nothing c
+
+-- Returns @True@ if @k1@ is shorter in length than @k2@.
+shorter :: Key -> Key -> Bool
+shorter x y = S.length x < S.length y
 
 {--------------------------------------------------------------------
   Debugging

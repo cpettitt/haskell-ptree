@@ -45,6 +45,14 @@ prop_modelShow            = show              `eq1`     show -- tentative, if Ma
 prop_modelUnion (l1 :: L) (l2 :: L) =
     P.toList (P.union (P.fromList l1) (P.fromList l2)) == M.toList (M.union (M.fromList l1) (M.fromList l2))
 
+prop_modelUnionWithKey (l1 :: L) (l2 :: L) =
+        P.toList (P.unionWithKey sumKVV t1 t2) == M.toList (M.unionWithKey sumKVV m1 m2)
+    where
+        t1 = P.fromList l1
+        t2 = P.fromList l2
+        m1 = M.fromList l1
+        m2 = M.fromList l2
+
 prop_modelFromList (l :: L) = P.toList (P.fromList l) == M.toList (M.fromList l)
 
 prop_modelFromListWith (l :: L) = P.toList (P.fromListWith f l) == M.toList (M.fromListWith f l)
@@ -96,6 +104,9 @@ prop_delete (t :: T) = not (P.null t) ==> let k = head $ P.keys t in
 prop_updateWithKey1 (t :: T) k v = P.notMember k $ P.updateWithKey (\_ _ -> Nothing) k (P.insert k v t)
 prop_updateWithKey2 (t :: T) k v = P.updateWithKey (\k -> Just . sumKV k) k (P.insert k v t) P.! k == sumKV k v
 
+prop_unionWithKey (t1 :: T) (t2 :: T) k v1 v2 =
+    P.unionWithKey sumKVV (P.insert k v1 t1) (P.insert k v2 t2) P.! k == sumKVV k v1 v2
+
 prop_keys (t :: T) = P.keys t == keyList
     where
         keyList = map fst $ P.toList t
@@ -127,6 +138,7 @@ main = do
     check "modelUpdate"          prop_modelUpdate
     check "modelUpdateWithKey"   prop_modelUpdateWithKey
     check "modelUnion"           prop_modelUnion
+    check "modelUnionWithKey"    prop_modelUnionWithKey
     check "modelMap"             prop_modelMap
     check "modelMapWithKey"      prop_modelMapWithKey
     check "modelFold"            prop_modelFold 
@@ -165,5 +177,6 @@ main = do
     check "delete"               prop_delete
     check "updateWithKey1"       prop_updateWithKey1
     check "updateWithKey2"       prop_updateWithKey2
+    check "unionWithKey"         prop_unionWithKey
     check "keys"                 prop_keys
     check "prefixes"             prop_prefixes
