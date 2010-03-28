@@ -26,4 +26,5 @@ Extra-Source-Files: README test/Main.hs
 Library
     Build-Depends:      base >= 3, base < 5, bytestring, containers
     Exposed-Modules:    Data.PTree
+                        Data.PTree.Internal
     Ghc-Options:        -Wall
