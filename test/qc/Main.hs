@@ -53,6 +53,12 @@ prop_modelUnionWithKey (l1 :: L) (l2 :: L) =
         m1 = M.fromList l1
         m2 = M.fromList l2
 
+prop_modelUnions (ls :: [L]) =
+    P.toList (P.unions $ map P.fromList ls) == M.toList (M.unions $ map M.fromList ls)
+
+prop_modelUnionsWith (ls :: [L]) =
+    P.toList (P.unionsWith sumVV $ map P.fromList ls) == M.toList (M.unionsWith sumVV $ map M.fromList ls)
+
 prop_modelFromList (l :: L) = P.toList (P.fromList l) == M.toList (M.fromList l)
 
 prop_modelFromListWith (l :: L) = P.toList (P.fromListWith f l) == M.toList (M.fromListWith f l)
@@ -139,6 +145,8 @@ main = do
     check "modelUpdateWithKey"   prop_modelUpdateWithKey
     check "modelUnion"           prop_modelUnion
     check "modelUnionWithKey"    prop_modelUnionWithKey
+    check "modelUnions"          prop_modelUnions
+    check "modelUnionsWith"      prop_modelUnionsWith
     check "modelMap"             prop_modelMap
     check "modelMapWithKey"      prop_modelMapWithKey
     check "modelFold"            prop_modelFold 

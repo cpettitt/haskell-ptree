@@ -66,6 +66,9 @@ module Data.PTree (
         , union
         , unionWith
         , unionWithKey
+        , unions
+        , unionsWith
+        , unionsWithKey
 
         -- * Traversal
 
@@ -293,7 +296,7 @@ union t1@(Node k1 v1 c1) t2@(Node k2 v2 c2)
         | k1 == k2      = Node k1 valueUnion childUnion
         | otherwise     = join t1 t2 
     where
-        union1 | k1 `S.isPrefixOf` k2 = updateChild (union t2) t1 k2
+        union1 | k1 `S.isPrefixOf` k2 = updateChild (flip union t2) t1 k2
                | otherwise = join t1 t2
         union2 | k2 `S.isPrefixOf` k1 = updateChild (union t1) t2 k1
                | otherwise = join t1 t2
@@ -316,7 +319,7 @@ unionWithKey f t1@(Node k1 v1 c1) t2@(Node k2 v2 c2)
         | k1 == k2      = Node k1 valueUnion childUnion
         | otherwise     = join t1 t2 
     where
-        union1 | k1 `S.isPrefixOf` k2 = updateChild (unionWithKey f t2) t1 k2
+        union1 | k1 `S.isPrefixOf` k2 = updateChild (flip (unionWithKey f) t2) t1 k2
                | otherwise = join t1 t2
         union2 | k2 `S.isPrefixOf` k1 = updateChild (unionWithKey f t1) t2 k1
                | otherwise = join t1 t2
@@ -329,6 +332,20 @@ unionWithKey f t1@(Node k1 v1 c1) t2@(Node k2 v2 c2)
 unionWithKey _ Nil Nil = Nil
 unionWithKey _ t Nil   = t
 unionWithKey _ Nil t   = t
+
+-- | The union of a list of trees.
+unions :: [PTree a] -> PTree a
+unions xs = foldl' union empty xs
+
+-- | Like 'unions' but with a combining function for resolving values
+--   of duplicate keys.
+unionsWith :: (a -> a -> a) -> [PTree a] -> PTree a
+unionsWith f xs = foldl' (unionWith f) empty xs
+
+-- | Like 'unionsWith' but the combining function also takes a 'Key'.
+unionsWithKey :: (Key -> a -> a -> a) -> [PTree a] -> PTree a
+unionsWithKey f xs = foldl' (unionWithKey f) empty xs
+
 
 {--------------------------------------------------------------------
   Map

@@ -96,6 +96,9 @@ listEq4 :: (b -> c -> d -> T -> T)
 listEq4 f g = eq4 (\x' y' z' l' -> P.toList $ f x' y' z' l')
                   (\x' y' z' l' -> M.toList $ g x' y' z' l')
 
+sumVV :: Int -> Int -> Int
+sumVV x y = x + y
+
 sumKV :: P.Key -> Int -> Int
 sumKV k v = C.length k + v
 
