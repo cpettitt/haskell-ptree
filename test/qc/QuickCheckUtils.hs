@@ -69,6 +69,9 @@ eq4 f g x y z l = f x y z t == g x y z m
         t = P.fromList l
         m = M.fromList l
 
+listEq0 :: T -> M -> Bool
+listEq0 t m = P.toList t == M.toList m
+
 listEq2 :: (b -> T -> T)
         -> (b -> M -> M)
         -> b

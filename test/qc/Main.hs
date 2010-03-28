@@ -5,6 +5,7 @@ module Main where
 import qualified Data.ByteString.Char8 as C
 import Data.List (sort)
 import qualified Data.Map as M
+import Data.Monoid (Monoid(..))
 import qualified Data.PTree as P
 
 import Test.QuickCheck
@@ -16,7 +17,8 @@ import QuickCheckUtils
 {--------------------------------------------------------------------
   Model Tests
 --------------------------------------------------------------------}
-prop_modelFmap            = fmap              `listEq2` fmap             $ (+1)
+prop_modelFmap            = fmap              `listEq2` fmap              $ (+1)
+prop_modelMempty          = mempty            `listEq0` mempty
 prop_modelNull            = P.null            `eq1`     M.null
 prop_modelSize            = P.size            `eq1`     M.size
 prop_modelMember          = P.member          `eq2`     M.member
@@ -24,51 +26,53 @@ prop_modelNotMember       = P.notMember       `eq2`     M.notMember
 prop_modelLookup          = P.lookup          `eq2`     M.lookup
 prop_modelFindWithDefault = P.findWithDefault `eq3`     M.findWithDefault
 prop_modelInsert          = P.insert          `listEq3` M.insert
-prop_modelInsertWith      = P.insertWith      `listEq4` M.insertWith     $ (+)
-prop_modelInsertWith'     = P.insertWith'     `listEq4` M.insertWith'    $ (+)
-prop_modelInsertWithKey   = P.insertWithKey   `listEq4` M.insertWithKey  $ sumKVV
-prop_modelInsertWithKey'  = P.insertWithKey'  `listEq4` M.insertWithKey' $ sumKVV
+prop_modelInsertWith      = P.insertWith      `listEq4` M.insertWith      $ (+)
+prop_modelInsertWith'     = P.insertWith'     `listEq4` M.insertWith'     $ (+)
+prop_modelInsertWithKey   = P.insertWithKey   `listEq4` M.insertWithKey   $ sumKVV
+prop_modelInsertWithKey'  = P.insertWithKey'  `listEq4` M.insertWithKey'  $ sumKVV
 prop_modelDelete          = P.delete          `listEq2` M.delete
-prop_modelAdjust          = P.adjust          `listEq3` M.adjust         $ (+1)
-prop_modelAdjustWithKey   = P.adjustWithKey   `listEq3` M.adjustWithKey  $ sumKV
-prop_modelUpdate          = P.update          `listEq3` M.update         $ (\v -> Just $ v+1)
-prop_modelUpdateWithKey   = P.updateWithKey   `listEq3` M.updateWithKey  $ (\k v -> Just $ C.length k + v + 1)
-prop_modelMap             = P.map             `listEq2` M.map            $ (+1)
-prop_modelMapWithKey      = P.mapWithKey      `listEq2` M.mapWithKey     $ sumKV
-prop_modelFold            = P.fold            `eq3`     M.fold           $ (+)
-prop_modelFoldWithKey     = P.foldWithKey     `eq3`     M.foldWithKey    $ sumKVV
+prop_modelAdjust          = P.adjust          `listEq3` M.adjust          $ (+1)
+prop_modelAdjustWithKey   = P.adjustWithKey   `listEq3` M.adjustWithKey   $ sumKV
+prop_modelUpdate          = P.update          `listEq3` M.update          $ (\v -> Just $ v+1)
+prop_modelUpdateWithKey   = P.updateWithKey   `listEq3` M.updateWithKey   $ (\k v -> Just $ C.length k + v + 1)
+prop_modelMap             = P.map             `listEq2` M.map             $ (+1)
+prop_modelMapWithKey      = P.mapWithKey      `listEq2` M.mapWithKey      $ sumKV
+prop_modelFold            = P.fold            `eq3`     M.fold            $ (+)
+prop_modelFoldWithKey     = P.foldWithKey     `eq3`     M.foldWithKey     $ sumKVV
 prop_modelElems           = P.elems           `eq1`     M.elems
 prop_modelKeys            = P.keys            `eq1`     M.keys
 prop_modelKeysSet         = P.keysSet         `eq1`     M.keysSet
 prop_modelAssocs          = P.assocs          `eq1`     M.assocs
 prop_modelShow            = show              `eq1`     show -- tentative, if Map.show ever changed...
 
-prop_modelUnion (l1 :: L) (l2 :: L) =
-    P.toList (P.union (P.fromList l1) (P.fromList l2)) == M.toList (M.union (M.fromList l1) (M.fromList l2))
+prop_modelMappend l1 l2 =
+    mappend (P.fromList l1) (P.fromList l2) `listEq0` mappend (M.fromList l1) (M.fromList l2)
 
-prop_modelUnionWithKey (l1 :: L) (l2 :: L) =
-        P.toList (P.unionWithKey sumKVV t1 t2) == M.toList (M.unionWithKey sumKVV m1 m2)
+prop_modelMconcat ls =
+    mconcat (map P.fromList ls) `listEq0` mconcat (map M.fromList ls)
+
+prop_modelUnion l1 l2 =
+    P.union (P.fromList l1) (P.fromList l2) `listEq0` M.union (M.fromList l1) (M.fromList l2)
+
+prop_modelUnionWithKey l1 l2 =
+        P.unionWithKey sumKVV t1 t2 `listEq0` M.unionWithKey sumKVV m1 m2
     where
         t1 = P.fromList l1
         t2 = P.fromList l2
         m1 = M.fromList l1
         m2 = M.fromList l2
 
-prop_modelUnions (ls :: [L]) =
-    P.toList (P.unions $ map P.fromList ls) == M.toList (M.unions $ map M.fromList ls)
+prop_modelUnions ls =
+    P.unions (map P.fromList ls) `listEq0` M.unions (map M.fromList ls)
 
-prop_modelUnionsWith (ls :: [L]) =
-    P.toList (P.unionsWith sumVV $ map P.fromList ls) == M.toList (M.unionsWith sumVV $ map M.fromList ls)
+prop_modelUnionsWith ls =
+    P.unionsWith sumVV (map P.fromList ls) `listEq0` M.unionsWith sumVV (map M.fromList ls)
 
 prop_modelFromList (l :: L) = P.toList (P.fromList l) == M.toList (M.fromList l)
 
-prop_modelFromListWith (l :: L) = P.toList (P.fromListWith f l) == M.toList (M.fromListWith f l)
-    where
-        f v v' = v + v'
+prop_modelFromListWith (l :: L) = P.toList (P.fromListWith sumVV l) == M.toList (M.fromListWith sumVV l)
 
-prop_modelFromListWithKey (l :: L) = P.toList (P.fromListWithKey f l) == M.toList (M.fromListWithKey f l)
-    where
-        f k v v' = C.length k + v + v'
+prop_modelFromListWithKey l = P.toList (P.fromListWithKey sumKVV l) == M.toList (M.fromListWithKey sumKVV l)
 
 {--------------------------------------------------------------------
   Idempotent Tests
@@ -129,6 +133,9 @@ main = do
 
     group "Model Tests"
     check "modelFmap"            prop_modelFmap
+    check "modelMempty"          prop_modelMempty
+    check "modelMappend"         prop_modelMappend
+    check "modelMconcat"         prop_modelMconcat
     check "modelNull"            prop_modelNull
     check "modelSize"            prop_modelSize
     check "modelMember"          prop_modelMember
@@ -147,11 +154,12 @@ main = do
     check "modelUpdateWithKey"   prop_modelUpdateWithKey
     check "modelUnion"           prop_modelUnion
     check "modelUnionWithKey"    prop_modelUnionWithKey
-    check "modelUnions"          prop_modelUnions
+-- The following is tested through Mconcat, which covers both cases for hpc
+--    check "modelUnions"          prop_modelUnions      
     check "modelUnionsWith"      prop_modelUnionsWith
     check "modelMap"             prop_modelMap
     check "modelMapWithKey"      prop_modelMapWithKey
-    check "modelFold"            prop_modelFold 
+    check "modelFold"            prop_modelFold
     check "modelFoldWithKey"     prop_modelFoldWithKey
     check "modelElems"           prop_modelElems
     check "modelKeys"            prop_modelKeys

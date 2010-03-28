@@ -100,7 +100,7 @@ import Data.Function (on)
 import qualified Data.IntMap as IM
 import Data.List (foldl')
 import Data.Maybe (fromMaybe)
-import Data.Monoid (First(..), getFirst, mappend)
+import Data.Monoid (First(..), Monoid(..), getFirst, mappend)
 import Data.PTree.Internal
 import qualified Data.Set as Set
 import Data.Word
@@ -118,6 +118,11 @@ instance (Eq a) => Eq (PTree a) where
 
 instance Functor PTree where
     fmap = map
+
+instance Monoid (PTree a) where
+    mempty = empty
+    mappend = union
+    mconcat = unions
 
 {--------------------------------------------------------------------
   Constructors
