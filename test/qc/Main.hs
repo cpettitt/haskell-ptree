@@ -42,6 +42,9 @@ prop_modelKeysSet         = P.keysSet         `eq1`     M.keysSet
 prop_modelAssocs          = P.assocs          `eq1`     M.assocs
 prop_modelShow            = show              `eq1`     show -- tentative, if Map.show ever changed...
 
+prop_modelUnion (l1 :: L) (l2 :: L) =
+    P.toList (P.union (P.fromList l1) (P.fromList l2)) == M.toList (M.union (M.fromList l1) (M.fromList l2))
+
 prop_modelFromList (l :: L) = P.toList (P.fromList l) == M.toList (M.fromList l)
 
 prop_modelFromListWith (l :: L) = P.toList (P.fromListWith f l) == M.toList (M.fromListWith f l)
@@ -123,6 +126,7 @@ main = do
     check "modelAdjustWithKey"   prop_modelAdjustWithKey
     check "modelUpdate"          prop_modelUpdate
     check "modelUpdateWithKey"   prop_modelUpdateWithKey
+    check "modelUnion"           prop_modelUnion
     check "modelMap"             prop_modelMap
     check "modelMapWithKey"      prop_modelMapWithKey
     check "modelFold"            prop_modelFold 

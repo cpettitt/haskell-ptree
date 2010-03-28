@@ -60,7 +60,13 @@ module Data.PTree (
         , update
         , updateWithKey
 
+        -- * Combine
+
+        -- ** Union
+        , union
+
         -- * Traversal
+
         -- ** Map
         , map
         , mapWithKey
@@ -91,6 +97,7 @@ import Data.Function (on)
 import qualified Data.IntMap as IM
 import Data.List (foldl')
 import Data.Maybe (fromMaybe)
+import Data.Monoid (First(..), getFirst, mappend)
 import qualified Data.Set as Set
 import Data.Word
 import Prelude hiding (foldr, lookup, map, null)
@@ -270,6 +277,31 @@ updateWithKey f k n@(Node nk nv nc)
     | nk `S.isPrefixOf` k = updateChild (updateWithKey f k) n k
     | otherwise = n
 
+
+{--------------------------------------------------------------------
+  Union
+--------------------------------------------------------------------}
+
+-- | /O(n+m)/ The left-biased union of @t1@ and @t2@. It prefers a
+--   value from the first tree when duplicate keys are encountered.
+union :: PTree a -> PTree a -> PTree a
+union t1@(Node k1 v1 c1) t2@(Node k2 v2 c2)
+        | shorter k1 k2 = union1
+        | shorter k2 k1 = union2
+        | k1 == k2      = Node k1 valueUnion childUnion
+        | otherwise     = join t1 t2 
+    where
+        shorter x y = S.length x < S.length y
+        union1 | k1 `S.isPrefixOf` k2 = updateChild (union t2) t1 k2
+               | otherwise = join t1 t2
+        union2 | k2 `S.isPrefixOf` k1 = updateChild (union t1) t2 k1
+               | otherwise = join t1 t2
+        valueUnion = getFirst $ mappend (First v1) (First v2)
+        childUnion = IM.unionWith union c1 c2
+union Nil Nil = Nil
+union t Nil   = t
+union Nil t   = t
+
 {--------------------------------------------------------------------
   Map
 --------------------------------------------------------------------}
@@ -380,6 +412,12 @@ fromListWithKey f = foldl' ins empty
 node :: Key -> Maybe a -> PTree a
 node k v = Node k v IM.empty
 
+-- Merges two trees into a single tree. If one node has a key that is a prefix
+-- of the key of the other node, then the former is lifted to the position of
+-- parent in the new tree and the latter becomes its child. Otherwise the
+-- common prefix of the two nodes, which may be nothing, is lifted to the
+-- position of the parent in the new tree and the two nodes are added as
+-- children.
 join :: PTree a -> PTree a -> PTree a
 join x@(Node xk _ _) y@(Node yk _ _)
         | xk == ck = insertChild y yk x
